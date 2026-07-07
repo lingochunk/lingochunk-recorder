@@ -12,7 +12,7 @@
 import { connect } from './lib/auth.js';
 import { ApiClient } from './lib/api.js';
 import { showRecordingBadge, showUnsentBadge } from './lib/badge.js';
-import { AUTO_STOP_OPTIONS } from './lib/durations.js';
+import { AUTO_STOP_OPTIONS, clampCustomMinutes, selectValueFor } from './lib/durations.js';
 import { ext } from './lib/env.js';
 import { RecordingStore } from './lib/db.js';
 import { CEFR_LEVELS, LEARNING_LANGUAGES, NATIVE_LANGUAGES } from './lib/languages.js';
@@ -189,24 +189,39 @@ async function refreshSourceOptions() {
   $('source-field').hidden = false;
   const armed = await getArmedLessonTab();
   const tabOption = $('source-tab-option');
+  const tabOnlyOption = $('source-tabonly-option');
   const hint = $('tab-hint');
   if (armed) {
     const title = armed.title.length > 40 ? `${armed.title.slice(0, 40)}…` : armed.title;
     tabOption.disabled = false;
     tabOption.textContent = `Microphone + tab: ${title}`;
-    hint.hidden = $('source-select').value !== 'mic+tab';
+    tabOnlyOption.disabled = false;
+    tabOnlyOption.textContent = `Tab only: ${title}`;
+    hint.hidden = $('source-select').value === 'mic';
     hint.textContent =
-      'Records you and the lesson tab together. Wear headphones so the ' +
-      "teacher's voice isn't picked up twice.";
+      $('source-select').value === 'tab'
+        ? 'Records only the tab — your microphone stays off.'
+        : 'Records you and the lesson tab together. Wear headphones so the ' +
+          "teacher's voice isn't picked up twice.";
   } else {
     tabOption.disabled = true;
     tabOption.textContent = 'Microphone + lesson tab';
-    if ($('source-select').value === 'mic+tab') $('source-select').value = 'mic';
+    tabOnlyOption.disabled = true;
+    tabOnlyOption.textContent = 'Lesson tab only';
+    if ($('source-select').value !== 'mic') $('source-select').value = 'mic';
     hint.hidden = false;
     hint.textContent =
       'To record an online lesson too, open its tab and click the ' +
-      'LingoChunk icon there — then pick "Microphone + tab" here.';
+      'LingoChunk icon there — then pick a tab source here.';
   }
+}
+
+/** The auto-stop minutes currently chosen in the form (custom input aware). */
+function effectiveAutoStopMinutes() {
+  const value = $('autostop-select').value;
+  return value === 'custom'
+    ? clampCustomMinutes($('autostop-custom').value)
+    : Number(value);
 }
 
 function currentMeta() {
@@ -280,7 +295,7 @@ async function startRecordingMode(mode, { autoStopMinutes } = {}) {
   });
 
   let tabStream = null;
-  if (mode === 'mic+tab') {
+  if (mode === 'mic+tab' || mode === 'tab') {
     if (!tabCaptureAvailable()) {
       return { error: 'This browser cannot capture tab audio.' };
     }
@@ -304,7 +319,11 @@ async function startRecordingMode(mode, { autoStopMinutes } = {}) {
   }
 
   try {
-    await session.start(meta, { micDeviceId: $('mic-select').value, tabStream });
+    await session.start(meta, {
+      micDeviceId: $('mic-select').value,
+      tabStream,
+      mic: mode !== 'tab',
+    });
   } catch (error) {
     tabStream?.getTracks().forEach((track) => track.stop());
     return {
@@ -343,10 +362,10 @@ async function toggleRecording() {
     await maybeAutoSend(row);
     return;
   }
-  const mode =
-    tabCaptureAvailable() && $('source-select').value === 'mic+tab' ? 'mic+tab' : 'mic';
+  const selected = $('source-select').value;
+  const mode = tabCaptureAvailable() && selected !== 'mic' ? selected : 'mic';
   const result = await startRecordingMode(mode, {
-    autoStopMinutes: Number($('autostop-select').value),
+    autoStopMinutes: effectiveAutoStopMinutes(),
   });
   if (result.error) showError($('record-error'), result.error);
 }
@@ -492,10 +511,11 @@ async function renderRecordings() {
     title.textContent = row.title || 'Untitled recording';
     const meta = document.createElement('span');
     meta.className = 'rec-meta';
+    const sourceTag =
+      row.source === 'mic+tab' ? ' · with tab audio' : row.source === 'tab' ? ' · tab audio' : '';
     meta.textContent =
       `${new Date(row.createdAt).toLocaleString()} · ${fmtDuration(row.durationMs)} · ` +
-      `${fmtSize(row.sizeBytes)} · ${row.learningLanguage}` +
-      (row.source === 'mic+tab' ? ' · with tab audio' : '');
+      `${fmtSize(row.sizeBytes)} · ${row.learningLanguage}${sourceTag}`;
     const [pillText, pillClass] = STATUS_PILLS[status] ?? [status, 'pill-muted'];
     const pill = document.createElement('span');
     pill.className = `pill ${pillClass}`;
@@ -585,10 +605,17 @@ async function init() {
     settings = { ...settings, autoSend: $('autosend-check').checked };
     void saveSettings({ autoSend: settings.autoSend });
   });
-  fillSelect($('autostop-select'), AUTO_STOP_OPTIONS, String(settings.autoStopMinutes));
-  $('autostop-select').addEventListener('change', () => {
-    void saveSettings({ autoStopMinutes: Number($('autostop-select').value) });
-  });
+  fillSelect($('autostop-select'), AUTO_STOP_OPTIONS, selectValueFor(settings.autoStopMinutes));
+  if (selectValueFor(settings.autoStopMinutes) === 'custom') {
+    $('autostop-custom').value = String(settings.autoStopMinutes);
+    $('autostop-custom').hidden = false;
+  }
+  const saveAutoStop = () => {
+    $('autostop-custom').hidden = $('autostop-select').value !== 'custom';
+    void saveSettings({ autoStopMinutes: effectiveAutoStopMinutes() });
+  };
+  $('autostop-select').addEventListener('change', saveAutoStop);
+  $('autostop-custom').addEventListener('change', saveAutoStop);
   fillSelect($('learning-lang'), LEARNING_LANGUAGES, settings.learningLanguage);
   fillSelect($('native-lang'), NATIVE_LANGUAGES, settings.nativeLanguage);
   fillSelect($('level-select'), CEFR_LEVELS.map((l) => [l, l]), settings.level);
@@ -644,10 +671,9 @@ async function init() {
       if (message.type === 'rec-status') {
         sendResponse({ active: session.active, elapsedMs: session.elapsedMs, tabId: myTabId });
       } else if (message.type === 'rec-start') {
+        const mode = ['mic', 'mic+tab', 'tab'].includes(message.mode) ? message.mode : 'mic';
         sendResponse(
-          await startRecordingMode(message.mode === 'mic+tab' ? 'mic+tab' : 'mic', {
-            autoStopMinutes: message.autoStopMinutes,
-          }),
+          await startRecordingMode(mode, { autoStopMinutes: message.autoStopMinutes }),
         );
       } else if (message.type === 'rec-stop') {
         if (!session.active) {

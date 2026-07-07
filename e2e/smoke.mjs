@@ -118,6 +118,31 @@ try {
   if (mix.blobSize <= 0) fail('mix blob is empty');
   console.log(`SMOKE OK (mix): recorded ${mix.durationMs}ms, ${mix.blobSize} bytes from mic + synthetic tab`);
 
+  // Scenario 2b: tab-only (no microphone requested at all).
+  const tabOnly = await page.evaluate(async () => {
+    const { RecordingStore } = await import('./lib/db.js');
+    const { RecordingSession } = await import('./lib/recording.js');
+    const store = await RecordingStore.open();
+    const session = new RecordingSession(store);
+    const ctx = new AudioContext();
+    await ctx.resume();
+    const osc = ctx.createOscillator();
+    const synthTab = ctx.createMediaStreamDestination();
+    osc.connect(synthTab);
+    osc.start();
+    const rec = await session.start({ title: 'tab-only-smoke' }, { tabStream: synthTab.stream, mic: false });
+    await new Promise((resolve) => setTimeout(resolve, 6_500));
+    const row = await session.stop();
+    const blob = await store.assembleBlob(rec.id);
+    osc.stop();
+    await ctx.close();
+    return { status: row.status, source: row.source, blobSize: blob.size };
+  });
+  if (tabOnly.status !== 'recorded') fail(`tab-only status ${tabOnly.status}`);
+  if (tabOnly.source !== 'tab') fail(`tab-only source ${tabOnly.source}`);
+  if (tabOnly.blobSize <= 0) fail('tab-only blob is empty');
+  console.log(`SMOKE OK (tab-only): ${tabOnly.blobSize} bytes without touching the mic`);
+
   // Scenario 3: the popup remote control. The popup page is opened as a
   // normal tab (Playwright cannot click the toolbar), and drives the
   // recorder page via runtime messaging: start, badge state, stop, saved.

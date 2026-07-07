@@ -43,21 +43,26 @@ export class RecordingSession {
   }
 
   /**
-   * Ask for the mic and start recording into a fresh recording row.
+   * Start recording into a fresh recording row.
    *
-   * With a `tabStream` (captured lesson-tab audio, see tabaudio.js), both
-   * sources are mixed into one track via the Web Audio API. The tab audio is
-   * also played back to the speakers — capturing a tab MUTES it for the user,
-   * and the learner still needs to hear the teacher. The microphone is never
-   * played back (feedback loop).
+   * Sources: the microphone (default), a `tabStream` (captured lesson-tab
+   * audio, see tabaudio.js), or both mixed into one track via the Web Audio
+   * API. Tab audio is always played back to the speakers — capturing a tab
+   * MUTES it for the user, and the learner still needs to hear the teacher.
+   * The microphone is never played back (feedback loop). With `mic: false`
+   * the microphone is not even requested, so tab-only recording needs no mic
+   * permission at all.
    */
-  async start(meta, { micDeviceId = '', tabStream = null } = {}) {
+  async start(meta, { micDeviceId = '', tabStream = null, mic = true } = {}) {
     if (this.active) throw new Error('Already recording');
-    const constraints = {
-      audio: micDeviceId ? { deviceId: { exact: micDeviceId } } : true,
-    };
-    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (!mic && !tabStream) throw new Error('No audio source selected');
     const mimeType = pickMimeType();
+
+    this.stream = mic
+      ? await navigator.mediaDevices.getUserMedia({
+          audio: micDeviceId ? { deviceId: { exact: micDeviceId } } : true,
+        })
+      : null;
 
     let recordStream = this.stream;
     if (tabStream) {
@@ -65,7 +70,9 @@ export class RecordingSession {
       this.audioContext = new AudioContext();
       await this.audioContext.resume();
       const mix = this.audioContext.createMediaStreamDestination();
-      this.audioContext.createMediaStreamSource(this.stream).connect(mix);
+      if (this.stream) {
+        this.audioContext.createMediaStreamSource(this.stream).connect(mix);
+      }
       const tabSource = this.audioContext.createMediaStreamSource(tabStream);
       tabSource.connect(mix);
       tabSource.connect(this.audioContext.destination);
@@ -78,7 +85,7 @@ export class RecordingSession {
     this.recording = await this.store.createRecording({
       ...meta,
       mimeType,
-      source: tabStream ? 'mic+tab' : 'mic',
+      source: tabStream ? (mic ? 'mic+tab' : 'tab') : 'mic',
     });
     this.recorder = new MediaRecorder(recordStream, { mimeType });
     this.startedAt = Date.now();

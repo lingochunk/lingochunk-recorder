@@ -52,6 +52,7 @@
           <select id="source-select">
             <option value="mic">Microphone only</option>
             <option value="mic+tab" id="source-tab-option">Microphone + lesson tab</option>
+            <option value="tab" id="source-tabonly-option">Lesson tab only</option>
           </select>
         </label>
         <label class="field">
@@ -82,7 +83,10 @@
         </label>
         <label class="field">
           <span class="field-label">Stop automatically</span>
-          <select id="autostop-select"></select>
+          <span class="autostop-row">
+            <select id="autostop-select"></select>
+            <input id="autostop-custom" type="number" min="1" max="600" placeholder="min" hidden />
+          </span>
         </label>
       </div>
 

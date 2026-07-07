@@ -79,6 +79,8 @@ you are:
 - **Record mic + "\<this tab\>"** (Chrome, on web pages) — for lessons that
   happen in a browser tab (Google Meet, Zoom web, italki, a YouTube video):
   the tab's audio and your microphone are mixed into one recording
+- **Record this tab only** (Chrome) — just the tab, e.g. a YouTube video or
+  podcast; your microphone is never even switched on
 
 You stay on the lesson tab the whole time: the capture runs in a background
 recorder tab, the toolbar icon shows a red **REC** badge, and clicking the
@@ -86,9 +88,9 @@ icon again offers Stop. The full recorder page (icon → **Open recorder**)
 handles uploads, history, languages and settings, and can also start
 recordings directly.
 
-Set-and-forget options: an **auto-stop timer** (15–90 minutes — set it to
-your lesson length and never tape an hour of empty room), **send
-automatically** when recording stops, and the completion **email**. With all
+Set-and-forget options: an **auto-stop timer** (presets from 15 to 90
+minutes, or a custom length — a 12-minute video gets exactly 12 minutes),
+**send automatically** when recording stops, and the completion **email**. With all
 three on, the entire workflow is two clicks: record at the start, and an
 email arrives when the transcript is ready. Recordings that are still only
 on this device show as a count on the toolbar icon so nothing is forgotten.

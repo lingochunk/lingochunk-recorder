@@ -18,6 +18,10 @@
       <span class="record-dot"></span>
       <span id="rec-tab-label">Record mic + this tab</span>
     </button>
+    <button id="rec-tabonly-btn" class="btn btn-record popup-btn popup-btn-secondary" type="button" hidden>
+      <span class="record-dot"></span>
+      Record this tab only
+    </button>
     <button id="rec-mic-btn" class="btn btn-record popup-btn popup-btn-secondary" type="button">
       <span class="record-dot"></span>
       Record microphone
@@ -25,6 +29,7 @@
     <label class="popup-row">
       <span>Stop</span>
       <select id="autostop-select"></select>
+      <input id="autostop-custom" type="number" min="1" max="600" placeholder="min" hidden />
     </label>
     <p id="idle-hint" class="hint"></p>
   </div>

@@ -11,7 +11,7 @@
 
 import { showUnsentBadge } from './lib/badge.js';
 import { RecordingStore } from './lib/db.js';
-import { AUTO_STOP_OPTIONS } from './lib/durations.js';
+import { AUTO_STOP_OPTIONS, clampCustomMinutes, selectValueFor } from './lib/durations.js';
 import { ext } from './lib/env.js';
 import { getSettings, saveSettings } from './lib/settings.js';
 import { armLessonTab, tabCaptureAvailable } from './lib/tabaudio.js';
@@ -112,17 +112,25 @@ async function micPermissionGranted() {
   }
 }
 
+function effectiveAutoStopMinutes() {
+  const value = $('autostop-select').value;
+  return value === 'custom'
+    ? clampCustomMinutes($('autostop-custom').value)
+    : Number(value);
+}
+
 async function startRecording(mode) {
   showError(null);
 
   // First run: the mic grant needs a visible extension page — a prompt cannot
   // appear for a background tab. Send the user to the recorder once.
-  if (!(await micPermissionGranted())) {
+  // Tab-only recording uses no microphone, so it skips the check entirely.
+  if (mode !== 'tab' && !(await micPermissionGranted())) {
     await openRecorder();
     return;
   }
 
-  if (mode === 'mic+tab') {
+  if (mode === 'mic+tab' || mode === 'tab') {
     const tab = await activeTab();
     if (!(await armLessonTab(tab))) {
       showError('This page cannot be captured. Try from the lesson tab.');
@@ -140,7 +148,7 @@ async function startRecording(mode) {
     startTimer(status.elapsedMs ?? 0, Date.now());
     return;
   }
-  const autoStopMinutes = Number($('autostop-select').value);
+  const autoStopMinutes = effectiveAutoStopMinutes();
   void saveSettings({ autoStopMinutes });
   const reply = await sendToRecorder({
     type: 'rec-start',
@@ -223,7 +231,14 @@ function fillSelect(select, pairs, selected) {
 async function init() {
   const settings = await getSettings();
   $('notify-check').checked = settings.notifyDefault;
-  fillSelect($('autostop-select'), AUTO_STOP_OPTIONS, String(settings.autoStopMinutes));
+  fillSelect($('autostop-select'), AUTO_STOP_OPTIONS, selectValueFor(settings.autoStopMinutes));
+  if (selectValueFor(settings.autoStopMinutes) === 'custom') {
+    $('autostop-custom').value = String(settings.autoStopMinutes);
+    $('autostop-custom').hidden = false;
+  }
+  $('autostop-select').addEventListener('change', () => {
+    $('autostop-custom').hidden = $('autostop-select').value !== 'custom';
+  });
 
   // Mirror the recorder's live state, if one is open.
   const status = await locateRecorder();
@@ -245,6 +260,7 @@ async function init() {
     const capturable =
       tabCaptureAvailable() && tab && (tab.url === undefined || /^https?:/.test(tab.url));
     $('rec-tab-btn').hidden = !capturable;
+    $('rec-tabonly-btn').hidden = !capturable;
     if (capturable && tab.title) {
       const title = tab.title.length > 26 ? `${tab.title.slice(0, 26)}…` : tab.title;
       $('rec-tab-label').textContent = `Record mic + “${title}”`;
@@ -255,6 +271,7 @@ async function init() {
   }
 
   $('rec-tab-btn').addEventListener('click', () => void startRecording('mic+tab'));
+  $('rec-tabonly-btn').addEventListener('click', () => void startRecording('tab'));
   $('rec-mic-btn').addEventListener('click', () => void startRecording('mic'));
   $('stop-btn').addEventListener('click', () => void stopRecording());
   $('send-btn').addEventListener('click', () => void sendLastRecording());

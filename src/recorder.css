@@ -136,6 +136,10 @@ input:focus, select:focus { outline: none; border-color: var(--blue); }
   margin: 10px 0 0;
 }
 
+.autostop-row { display: flex; gap: 6px; }
+.autostop-row select { flex: 1; min-width: 0; }
+.autostop-row input { width: 72px; }
+
 .checkbox-row {
   display: flex;
   align-items: center;

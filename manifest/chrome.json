@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LingoChunk Recorder",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Record your language lessons and send them to LingoChunk to become interactive transcripts and Anki flashcards.",
   "icons": {
     "16": "src/icons/icon-16.png",

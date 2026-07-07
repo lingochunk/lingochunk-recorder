@@ -27,11 +27,14 @@ disclosures, which are legal statements by the publisher.
 > • Records an online lesson in one click: your microphone and the lesson's
 >   browser tab (Google Meet, Zoom web, italki, YouTube…) are mixed into a
 >   single recording, and you never have to leave the tab
+> • Or records just the tab — a video or podcast — without switching your
+>   microphone on at all
 > • Recording is local-first: audio is saved on your device every few seconds
 >   while you record, so a crash loses seconds, not the hour — and nothing is
 >   sent anywhere until you press "Send to LingoChunk"
-> • Set-and-forget: auto-stop after your lesson length (15–90 min), optional
->   automatic send, and an optional email when processing finishes
+> • Set-and-forget: auto-stop after your lesson length (presets or a custom
+>   number of minutes), optional automatic send, and an optional email when
+>   processing finishes
 > • Failed sends stay on your device for retry; a badge on the icon reminds
 >   you of recordings not yet sent
 >

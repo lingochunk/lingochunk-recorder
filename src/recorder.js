@@ -24,6 +24,7 @@ const $ = (id) => document.getElementById(id);
 let store;
 let session;
 let settings;
+let myTabId; // this recorder tab's id, self-reported to the popup
 let timerInterval = null;
 const pollers = new Map(); // recordingId -> {stop}
 // Uploads currently in flight. Guards against a double-clicked Upload button
@@ -215,73 +216,114 @@ function currentMeta() {
   };
 }
 
-async function toggleRecording() {
-  showError($('record-error'), null);
+/** Reflect recording state everywhere: button, timer, and the toolbar badge
+ *  (the badge is what tells a user recording from the popup that the take is
+ *  still running while they are on another tab). */
+function setRecordingUi(active) {
   const btn = $('record-btn');
-  if (session.active) {
-    btn.disabled = true;
-    try {
-      await session.stop();
-    } finally {
-      btn.disabled = false;
-    }
-    btn.classList.remove('recording');
-    $('record-label').textContent = 'Start recording';
-    $('timer').hidden = true;
-    clearInterval(timerInterval);
-    await renderRecordings();
-    return;
-  }
-
-  try {
-    const meta = currentMeta();
-    await saveSettings({
-      learningLanguage: meta.learningLanguage,
-      nativeLanguage: meta.nativeLanguage,
-      level: meta.level,
-      collection: meta.collection,
-      micDeviceId: $('mic-select').value,
-    });
-
-    // Capture the armed lesson tab when the mic+tab source is selected.
-    let tabStream = null;
-    if (tabCaptureAvailable() && $('source-select').value === 'mic+tab') {
-      const armed = await getArmedLessonTab();
-      if (!armed) {
-        showError(
-          $('record-error'),
-          'The lesson tab is gone. Open it and click the LingoChunk icon there, then try again.',
-        );
-        return;
-      }
-      try {
-        tabStream = await captureTabAudio(armed.tabId);
-      } catch {
-        showError(
-          $('record-error'),
-          'Could not capture the lesson tab. Click the LingoChunk icon on that tab, then try again.',
-        );
-        return;
-      }
-    }
-
-    await session.start(meta, { micDeviceId: $('mic-select').value, tabStream });
-    btn.classList.add('recording');
-    $('record-label').textContent = 'Stop recording';
-    $('timer').hidden = false;
+  btn.classList.toggle('recording', active);
+  $('record-label').textContent = active ? 'Stop recording' : 'Start recording';
+  $('timer').hidden = !active;
+  clearInterval(timerInterval);
+  if (active) {
     timerInterval = setInterval(() => {
       $('timer').textContent = fmtDuration(session.elapsedMs);
     }, 500);
-    await refreshMics(); // labels become available after the first grant
-    await renderRecordings();
-  } catch (error) {
-    showError(
-      $('record-error'),
-      error.name === 'NotAllowedError'
-        ? 'Microphone access was declined. Allow it to record.'
-        : (error.message ?? String(error)),
-    );
   }
+  void setRecBadge(active);
+}
+
+async function setRecBadge(on) {
+  try {
+    await ext.action.setBadgeBackgroundColor({ color: '#C53030' });
+    await ext.action.setBadgeText({ text: on ? 'REC' : '' });
+  } catch {
+    // Badge is decoration; never let it break recording.
+  }
+}
+
+/**
+ * Start a recording in the given mode ('mic' | 'mic+tab'). Shared between the
+ * page's record button and the popup's remote-control messages. Returns
+ * {ok: true} or {error} rather than throwing, so the popup can show the
+ * message verbatim.
+ */
+async function startRecordingMode(mode) {
+  if (session.active) return { error: 'Already recording.' };
+
+  const meta = currentMeta();
+  await saveSettings({
+    learningLanguage: meta.learningLanguage,
+    nativeLanguage: meta.nativeLanguage,
+    level: meta.level,
+    collection: meta.collection,
+    micDeviceId: $('mic-select').value,
+  });
+
+  let tabStream = null;
+  if (mode === 'mic+tab') {
+    if (!tabCaptureAvailable()) {
+      return { error: 'This browser cannot capture tab audio.' };
+    }
+    const armed = await getArmedLessonTab();
+    if (!armed) {
+      return {
+        error:
+          'The lesson tab is gone. Open it and click the LingoChunk icon there, then try again.',
+      };
+    }
+    try {
+      tabStream = await captureTabAudio(armed.tabId);
+    } catch {
+      return {
+        error:
+          'Could not capture the lesson tab. Click the LingoChunk icon on that tab, then try again.',
+      };
+    }
+    // A tab recording without a manual title inherits the tab's title.
+    if (!meta.title) meta.title = armed.title;
+  }
+
+  try {
+    await session.start(meta, { micDeviceId: $('mic-select').value, tabStream });
+  } catch (error) {
+    tabStream?.getTracks().forEach((track) => track.stop());
+    return {
+      error:
+        error.name === 'NotAllowedError'
+          ? 'Microphone access was declined. Allow it to record.'
+          : (error.message ?? String(error)),
+    };
+  }
+
+  setRecordingUi(true);
+  void refreshMics(); // labels become available after the first grant
+  void renderRecordings();
+  return { ok: true };
+}
+
+async function stopRecordingSession() {
+  const btn = $('record-btn');
+  btn.disabled = true;
+  try {
+    return await session.stop();
+  } finally {
+    btn.disabled = false;
+    setRecordingUi(false);
+    await renderRecordings();
+  }
+}
+
+async function toggleRecording() {
+  showError($('record-error'), null);
+  if (session.active) {
+    await stopRecordingSession();
+    return;
+  }
+  const mode =
+    tabCaptureAvailable() && $('source-select').value === 'mic+tab' ? 'mic+tab' : 'mic';
+  const result = await startRecordingMode(mode);
+  if (result.error) showError($('record-error'), result.error);
 }
 
 // ---------------------------------------------------------------------------
@@ -527,6 +569,42 @@ async function init() {
       event.returnValue = '';
     }
   });
+
+  // Remote control for the toolbar popup: status, start, stop. sendResponse +
+  // `return true` is the cross-browser async-reply pattern (Chrome's listener
+  // ignores returned promises). Commands carry the target recorder's tabId
+  // (learned from a rec-status reply): with two recorder tabs open, only the
+  // addressed one may answer, otherwise the idle twin's instant "Not
+  // recording." wins the reply race against the busy one.
+  myTabId = (await ext.tabs.getCurrent())?.id;
+  ext.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (!message || typeof message.type !== 'string' || !message.type.startsWith('rec-')) {
+      return undefined;
+    }
+    if (message.tabId !== undefined && message.tabId !== myTabId) {
+      return undefined; // addressed to another recorder tab
+    }
+    (async () => {
+      if (message.type === 'rec-status') {
+        sendResponse({ active: session.active, elapsedMs: session.elapsedMs, tabId: myTabId });
+      } else if (message.type === 'rec-start') {
+        sendResponse(await startRecordingMode(message.mode === 'mic+tab' ? 'mic+tab' : 'mic'));
+      } else if (message.type === 'rec-stop') {
+        if (!session.active) {
+          sendResponse({ error: 'Not recording.' });
+        } else {
+          const row = await stopRecordingSession();
+          sendResponse({ ok: true, recordingId: row?.id });
+        }
+      } else {
+        sendResponse({ error: 'Unknown command.' });
+      }
+    })();
+    return true;
+  });
+
+  // Clear a REC badge left behind by a crash mid-recording.
+  await setRecBadge(false);
 }
 
 void init();

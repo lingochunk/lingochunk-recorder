@@ -76,12 +76,12 @@ const context = await chromium.launchPersistentContext(userDataDir, {
   ],
 });
 
+// Fixed id, derived from the "key" in manifest/chrome.json (there is no
+// background service worker to discover it from).
+const extensionId = 'aajiecjlpfedafgdnecdkagiomidfdcf';
+
 let submissionId = null;
 try {
-  let [worker] = context.serviceWorkers();
-  if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 10_000 });
-  const extensionId = new URL(worker.url()).host;
-
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/src/recorder.html`);
 

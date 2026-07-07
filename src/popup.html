@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LingoChunk Recorder</title>
+  <link rel="stylesheet" href="recorder.css" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body class="popup">
+  <header class="popup-header">
+    <img src="icons/icon-32.png" alt="" width="20" height="20" />
+    <strong>LingoChunk Recorder</strong>
+  </header>
+
+  <!-- idle -->
+  <div id="state-idle" hidden>
+    <button id="rec-tab-btn" class="btn btn-record popup-btn" type="button" hidden>
+      <span class="record-dot"></span>
+      <span id="rec-tab-label">Record mic + this tab</span>
+    </button>
+    <button id="rec-mic-btn" class="btn btn-record popup-btn popup-btn-secondary" type="button">
+      <span class="record-dot"></span>
+      Record microphone
+    </button>
+    <p id="idle-hint" class="hint"></p>
+  </div>
+
+  <!-- recording -->
+  <div id="state-recording" hidden>
+    <div class="popup-recording-row">
+      <span class="rec-live-dot"></span>
+      <span id="popup-timer" class="timer">0:00</span>
+    </div>
+    <button id="stop-btn" class="btn btn-record popup-btn" type="button">■ Stop recording</button>
+    <p class="hint">Recording continues if you close this popup.</p>
+  </div>
+
+  <!-- stopped -->
+  <div id="state-saved" hidden>
+    <p class="popup-saved">Saved on this device.</p>
+    <p class="hint">Open the recorder to upload it to LingoChunk.</p>
+  </div>
+
+  <p id="popup-error" class="error" hidden></p>
+
+  <footer class="popup-footer">
+    <button id="open-recorder" class="btn btn-small" type="button">Open recorder</button>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

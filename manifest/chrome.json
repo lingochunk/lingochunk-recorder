@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LingoChunk Recorder",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Record your language lessons and send them to LingoChunk to become interactive transcripts and Anki flashcards.",
   "icons": {
     "16": "src/icons/icon-16.png",
@@ -11,15 +11,13 @@
   },
   "action": {
     "default_title": "LingoChunk Recorder",
+    "default_popup": "src/popup.html",
     "default_icon": {
       "16": "src/icons/icon-16.png",
       "32": "src/icons/icon-32.png"
     }
   },
-  "background": {
-    "service_worker": "src/background.js",
-    "type": "module"
-  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAre2kPDqriLFpq9ZM6XgaMWWhCaCF4Tf2pJMNa8hxC3cLgx2GfW4j6+NHt1PNYH5LG8M8cmucXYkYL/dx2MRVPUF/9vGelLt+/KJ8th/MUrpyHjgxK536BS/n0eTpBdvZ2BNzBwMFP/DSlx2ZnYZdySs7m1mwIPdwCCikBs9ti7X8tAuvE1QbM5SHVj9Nndz+pRM5e3fcjeI3y+OQ3chfgJwB5lowkxB5jh6GRO1MpLqIXRk/Sz8/gehHK18Xaio4Ya4scQuSTl+mRTMyEM3436ZUJDK31PvnxSHokfo2OXrRYnJ1oZbdX9ZvJizrqdyfaSEA6ZAvHZIPM19oDbniiwIDAQAB",
   "permissions": ["storage", "identity", "tabCapture"],
   "host_permissions": ["https://lingochunk.com/*"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],

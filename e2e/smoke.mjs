@@ -44,12 +44,11 @@ const context = await chromium.launchPersistentContext(userDataDir, {
   ],
 });
 
-try {
-  // The MV3 service worker's URL carries the generated extension id.
-  let [worker] = context.serviceWorkers();
-  if (!worker) worker = await context.waitForEvent('serviceworker', { timeout: 10_000 });
-  const extensionId = new URL(worker.url()).host;
+// Fixed id, derived from the "key" in manifest/chrome.json (there is no
+// background service worker to discover it from).
+const extensionId = 'aajiecjlpfedafgdnecdkagiomidfdcf';
 
+try {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/src/recorder.html`);
   if ((await page.title()) !== 'LingoChunk Recorder') fail('page title wrong');
@@ -118,6 +117,31 @@ try {
   if (mix.source !== 'mic+tab') fail(`mix source ${mix.source}`);
   if (mix.blobSize <= 0) fail('mix blob is empty');
   console.log(`SMOKE OK (mix): recorded ${mix.durationMs}ms, ${mix.blobSize} bytes from mic + synthetic tab`);
+
+  // Scenario 3: the popup remote control. The popup page is opened as a
+  // normal tab (Playwright cannot click the toolbar), and drives the
+  // recorder page via runtime messaging: start, badge state, stop, saved.
+  // Mic permission for the extension origin was implicitly granted by
+  // scenario 1's getUserMedia under --use-fake-ui-for-media-stream.
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${extensionId}/src/popup.html`);
+  await popup.waitForSelector('#state-idle:not([hidden])', { timeout: 5_000 });
+  await popup.click('#rec-mic-btn');
+  await popup.waitForSelector('#state-recording:not([hidden])', { timeout: 10_000 });
+  await popup.waitForTimeout(6_500);
+  await popup.click('#stop-btn');
+  await popup.waitForSelector('#state-saved:not([hidden])', { timeout: 10_000 });
+
+  const remote = await page.evaluate(async () => {
+    const { RecordingStore } = await import('./lib/db.js');
+    const store = await RecordingStore.open();
+    const [row] = await store.listRecordings();
+    return { status: row.status, source: row.source, sizeBytes: row.sizeBytes };
+  });
+  if (remote.status !== 'recorded') fail(`popup-driven status ${remote.status}`);
+  if (remote.source !== 'mic') fail(`popup-driven source ${remote.source}`);
+  if (remote.sizeBytes <= 0) fail('popup-driven recording is empty');
+  console.log(`SMOKE OK (popup): remote-controlled recording of ${remote.sizeBytes} bytes`);
 } finally {
   await context.close();
   rmSync(userDataDir, { recursive: true, force: true });

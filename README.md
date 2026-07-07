@@ -59,8 +59,8 @@ once available, or see [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Connecting your account
 
-Click the extension icon, then **Connect to LingoChunk**. A LingoChunk window
-opens; sign in if needed and click **Authorise**. That's it.
+Click the extension icon → **Open recorder** → **Connect to LingoChunk**. A
+LingoChunk window opens; sign in if needed and click **Authorise**. That's it.
 
 What happens underneath: LingoChunk mints a personal access token restricted to
 the **Upload audio** scope and hands it straight to the extension. The token
@@ -69,21 +69,27 @@ revoke it at any time in LingoChunk → Settings → API tokens. You can also pa
 a token manually (useful for self-hosted servers; set the server URL in the
 extension's settings panel first).
 
-## Recording an online lesson (Chrome)
+## Recording
 
-For lessons that happen in a browser tab (Google Meet, Zoom web, italki, a
-YouTube video), Chrome can record the tab's audio and your microphone together,
-so both sides of the conversation land in one recording:
+Click the toolbar icon and the popup offers one-click recording, right where
+you are:
 
-1. Open the lesson tab and **click the LingoChunk icon there** (this is what
-   permits the capture — Chrome only allows an extension to record tabs it was
-   invoked on)
-2. In the recorder, choose **Microphone + tab: …** as the source
-3. Record as usual — you'll keep hearing the tab while it's captured
+- **Record microphone** — for in-person lessons or recording yourself
+- **Record mic + "\<this tab\>"** (Chrome, on web pages) — for lessons that
+  happen in a browser tab (Google Meet, Zoom web, italki, a YouTube video):
+  the tab's audio and your microphone are mixed into one recording
 
-Wear headphones, otherwise the teacher's voice reaches your microphone too and
-ends up in the recording twice. If the lesson tab is closed mid-recording, the
-recording stops gracefully and everything captured so far is kept.
+You stay on the lesson tab the whole time: the capture runs in a background
+recorder tab, the toolbar icon shows a red **REC** badge, and clicking the
+icon again offers Stop. The full recorder page (icon → **Open recorder**)
+handles uploads, history, languages and settings, and can also start
+recordings directly.
+
+Notes for tab recordings: wear headphones, otherwise the teacher's voice
+reaches your microphone and ends up in the recording twice. You keep hearing
+the tab while it's captured. If the lesson tab closes mid-recording, the
+recording stops gracefully and everything captured so far is kept. The very
+first recording asks for microphone access via the recorder page once.
 
 ## Privacy
 

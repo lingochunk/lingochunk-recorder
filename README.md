@@ -5,18 +5,19 @@ A browser extension that records your language lessons and sends them to
 native-audio practice material and Anki flashcards.
 
 Built for one job: press record at the start of a lesson with your teacher or
-language partner, press stop at the end, press upload. A little later the whole
-conversation is in your LingoChunk library with a word-by-word transcript.
+language partner, press stop at the end, send it to LingoChunk. A little later
+the whole conversation is in your library with a word-by-word transcript.
 
 ## How it works
 
 - **Recording is local-first.** Audio is written to your browser's local
   storage (IndexedDB) every few seconds while you record. No internet
-  connection is needed to record, and nothing is sent anywhere until you press
-  Upload. If the browser crashes mid-lesson, you lose a few seconds at most.
-- **Upload when ready.** One click sends the recording to your LingoChunk
+  connection is needed to record, and nothing leaves your device until you
+  press "Send to LingoChunk". If the browser crashes mid-lesson, you lose a
+  few seconds at most.
+- **Send when ready.** One click sends the recording to your LingoChunk
   account for processing (transcription, translation, vocabulary extraction).
-  If the upload fails, the recording stays on your device and you can retry.
+  If the send fails, the recording stays on your device and you can retry.
 - **Optional collections.** Pick one of your LingoChunk collections and the
   recording is published straight into it.
 
@@ -93,7 +94,7 @@ first recording asks for microphone access via the recorder page once.
 
 ## Privacy
 
-- Audio stays on your device until you press Upload.
+- Audio stays on your device until you press “Send to LingoChunk”.
 - Uploads go only to the LingoChunk server configured in settings, over HTTPS,
   into your own account.
 - The extension collects no analytics and talks to no third party.
@@ -120,14 +121,15 @@ PLAYWRIGHT_FROM=/path/to/any/project/with/playwright/package.json node e2e/smoke
 ```
 manifest/        per-browser MV3 manifests (chrome.json, firefox.json)
 src/
-  background.js  toolbar click → open/focus the recorder tab
-  recorder.*     the recorder page (all UI lives here)
+  popup.*        toolbar popup: one-click record/stop remote control
+  recorder.*     the recorder page (recording host, uploads, settings)
   lib/
     db.js        crash-safe IndexedDB chunk store
-    recording.js MediaRecorder session (5s timeslices)
+    recording.js MediaRecorder session (5s timeslices) + mic/tab mixing
+    tabaudio.js  lesson-tab arming + tabCapture (Chrome)
     api.js       LingoChunk public API client (/api/v1)
     auth.js      one-click connect (identity.launchWebAuthFlow)
-    uploader.js  upload with retry + processing poll
+    uploader.js  send with retry + processing poll
 scripts/build.mjs  copies src + the right manifest into dist/<browser>
 ```
 

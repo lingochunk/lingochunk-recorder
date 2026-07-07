@@ -141,11 +141,11 @@ try {
   await page.waitForSelector('#record-btn:not(.recording)', { timeout: 10_000 });
 
   const pill = await page.textContent('#recordings .pill');
-  if (pill !== 'Ready to upload') fail(`after stop, pill is "${pill}"`);
+  if (pill !== 'Ready to send') fail(`after stop, pill is "${pill}"`);
   log('recorded and stored locally');
 
   // --- upload + process ------------------------------------------------
-  await page.getByRole('button', { name: 'Upload' }).click();
+  await page.getByRole('button', { name: 'Send to LingoChunk' }).click();
   await page.waitForFunction(
     () => {
       const t = document.querySelector('#recordings .pill')?.textContent;

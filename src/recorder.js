@@ -332,8 +332,8 @@ async function toggleRecording() {
 
 const STATUS_PILLS = {
   recording: ['Recording…', 'pill-red'],
-  recorded: ['Ready to upload', 'pill-blue'],
-  uploading: ['Uploading…', 'pill-blue'],
+  recorded: ['Ready to send', 'pill-blue'],
+  uploading: ['Sending…', 'pill-blue'],
   processing: ['Processing…', 'pill-blue'],
   uploaded: ['In your library', 'pill-green'],
   failed: ['Failed', 'pill-red'],
@@ -352,7 +352,7 @@ async function handleUpload(recordingId) {
   if (inFlightUploads.has(recordingId)) return;
   if (!settings.token) {
     $('settings-panel').hidden = false;
-    showError($('settings-error'), 'Connect to LingoChunk first, then upload.');
+    showError($('settings-error'), 'Connect to LingoChunk first, then send.');
     return;
   }
   inFlightUploads.add(recordingId);
@@ -484,7 +484,9 @@ async function renderRecordings() {
     const actions = document.createElement('div');
     actions.className = 'rec-actions';
     if (status === 'recorded') {
-      actions.append(actionButton('Upload', () => handleUpload(row.id), 'btn btn-small btn-primary'));
+      actions.append(
+        actionButton('Send to LingoChunk', () => handleUpload(row.id), 'btn btn-small btn-primary'),
+      );
     }
     if (status === 'failed') {
       if (row.submissionId) {
@@ -492,7 +494,9 @@ async function renderRecordings() {
         // duplicate submission. Offer to resume the status poll instead.
         actions.append(actionButton('Check status', () => resumePolling(row), 'btn btn-small btn-primary'));
       } else {
-        actions.append(actionButton('Retry upload', () => handleUpload(row.id), 'btn btn-small btn-primary'));
+        actions.append(
+          actionButton('Retry send', () => handleUpload(row.id), 'btn btn-small btn-primary'),
+        );
       }
     }
     if (row.submissionId && (status === 'uploaded' || status === 'processing' || status === 'failed')) {

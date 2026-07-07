@@ -72,7 +72,7 @@ try {
   await page.waitForSelector('#record-btn:not(.recording)', { timeout: 10_000 });
 
   const pill = await page.textContent('#recordings .pill');
-  if (pill !== 'Ready to upload') fail(`final pill "${pill}"`);
+  if (pill !== 'Ready to send') fail(`final pill "${pill}"`);
 
   const finalRow = await page.evaluate(async () => {
     const { RecordingStore } = await import('./lib/db.js');

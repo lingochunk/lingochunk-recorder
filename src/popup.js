@@ -98,6 +98,7 @@ async function openRecorder() {
 function startTimer(baseElapsedMs, startedAtMonotonic, autoStopRemainingMs = null) {
   countdownDeadline =
     autoStopRemainingMs && autoStopRemainingMs > 0 ? Date.now() + autoStopRemainingMs : null;
+  let resolving = false;
   const paint = () => {
     $('popup-timer').textContent = fmtDuration(baseElapsedMs + (Date.now() - startedAtMonotonic));
     const live = $('autostop-live');
@@ -106,6 +107,15 @@ function startTimer(baseElapsedMs, startedAtMonotonic, autoStopRemainingMs = nul
       const remaining = Math.max(0, countdownDeadline - Date.now());
       $('popup-countdown').textContent =
         remaining > 0 ? `stops in ${fmtDuration(remaining)}` : 'stopping…';
+      // Past the deadline, stop guessing: ask the recorder what actually
+      // happened (its auto-stop may run up to one audio chunk late) and
+      // flip to the truthful end state.
+      if (remaining <= 0 && !resolving) {
+        resolving = true;
+        void resolveEnded().finally(() => {
+          resolving = false;
+        });
+      }
     } else {
       live.hidden = true;
     }
@@ -113,6 +123,32 @@ function startTimer(baseElapsedMs, startedAtMonotonic, autoStopRemainingMs = nul
   paint();
   clearInterval(timerInterval);
   timerInterval = setInterval(paint, 500);
+}
+
+/** The countdown expired in this popup's view — reconcile with the recorder. */
+async function resolveEnded() {
+  const status = await sendToRecorder({ type: 'rec-status' }, 1);
+  if (!status) return;
+  if (status.active) {
+    // Still going (the recorder stops within one ~5s chunk of the deadline);
+    // re-sync our local deadline if it was adjusted elsewhere.
+    if (status.autoStopRemainingMs > 0) {
+      countdownDeadline = Date.now() + status.autoStopRemainingMs;
+    }
+    return;
+  }
+  clearInterval(timerInterval);
+  countdownDeadline = null;
+  if (status.lastStopped) {
+    lastRecordingId = status.lastStopped.recordingId;
+    if (status.lastStopped.autoSent) {
+      $('sent-hint').textContent =
+        'It will appear in your LingoChunk library when processing finishes.';
+      showState('sent');
+      return;
+    }
+  }
+  showState('saved');
 }
 
 async function adjustCountdown(deltaMinutes) {

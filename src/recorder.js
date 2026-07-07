@@ -30,6 +30,10 @@ let myTabId; // this recorder tab's id, self-reported to the popup
 let timerInterval = null;
 let autoStopTimeout = null;
 let autoStopDeadline = null; // epoch ms when the take auto-stops, or null
+let autoStopFiring = false; // guards the timeout + chunk-backstop double fire
+// The most recent completed stop, so a popup reopened after the countdown
+// expired can show the truthful end state instead of counting into fiction.
+let lastStopped = null; // {recordingId, autoSent}
 
 // A minus that would stop in the past clamps to a short grace period, so
 // "−1m" near the end doubles as "wrap it up now".
@@ -273,14 +277,19 @@ function setRecordingUi(active) {
   // after every stop) refreshes it from the store.
 }
 
-/** Arm the auto-stop timer for this take (0/undefined = record until stopped). */
+/** Arm the auto-stop timer for this take (0/undefined = record until stopped).
+ *  The setTimeout gives second-level precision while the tab is visible; the
+ *  session's chunk-arrival backstop (session.autoStopAt) guarantees the stop
+ *  even when Chrome throttles this tab's timers in the background. */
 function scheduleAutoStop(minutes) {
   clearTimeout(autoStopTimeout);
   autoStopTimeout = null;
   autoStopDeadline = null;
+  session.autoStopAt = null;
   const ms = Number(minutes) * 60_000;
   if (!ms || ms <= 0) return;
   autoStopDeadline = Date.now() + ms;
+  session.autoStopAt = autoStopDeadline;
   autoStopTimeout = setTimeout(() => void handleAutoStop(), ms);
   paintCountdown();
 }
@@ -294,6 +303,7 @@ function adjustAutoStop(deltaMinutes) {
     autoStopDeadline - Date.now() + Number(deltaMinutes) * 60_000,
   );
   autoStopDeadline = Date.now() + remaining;
+  session.autoStopAt = autoStopDeadline;
   clearTimeout(autoStopTimeout);
   autoStopTimeout = setTimeout(() => void handleAutoStop(), remaining);
   paintCountdown();
@@ -301,9 +311,15 @@ function adjustAutoStop(deltaMinutes) {
 }
 
 async function handleAutoStop() {
-  if (!session.active) return;
-  const row = await stopRecordingSession();
-  await maybeAutoSend(row);
+  if (!session.active || autoStopFiring) return;
+  autoStopFiring = true;
+  try {
+    const row = await stopRecordingSession();
+    const autoSent = await maybeAutoSend(row);
+    if (row) lastStopped = { recordingId: row.id, autoSent };
+  } finally {
+    autoStopFiring = false;
+  }
 }
 
 /** Send a just-stopped recording without asking, when the user opted in. */
@@ -397,7 +413,8 @@ async function toggleRecording() {
   showError($('record-error'), null);
   if (session.active) {
     const row = await stopRecordingSession();
-    await maybeAutoSend(row);
+    const autoSent = await maybeAutoSend(row);
+    if (row) lastStopped = { recordingId: row.id, autoSent };
     return;
   }
   const selected = $('source-select').value;
@@ -716,6 +733,7 @@ async function init() {
             session.active && autoStopDeadline
               ? Math.max(0, autoStopDeadline - Date.now())
               : null,
+          lastStopped: session.active ? null : lastStopped,
           tabId: myTabId,
         });
       } else if (message.type === 'rec-adjust') {
@@ -731,6 +749,7 @@ async function init() {
         } else {
           const row = await stopRecordingSession();
           const autoSent = await maybeAutoSend(row);
+          if (row) lastStopped = { recordingId: row.id, autoSent };
           sendResponse({ ok: true, recordingId: row?.id, autoSent });
         }
       } else if (message.type === 'rec-send') {

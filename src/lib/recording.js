@@ -32,6 +32,13 @@ export class RecordingSession {
     // Fired when an external source (the captured lesson tab) ends mid-take,
     // so the UI can stop the recording gracefully instead of taping silence.
     this.onsourceended = null;
+    // Auto-stop deadline (epoch ms) and its callback. The deadline is checked
+    // on every arriving audio chunk: MediaRecorder's timeslice is driven by
+    // the media pipeline, which Chrome does NOT throttle in background tabs —
+    // unlike setTimeout, which can be deferred for minutes in a hidden tab.
+    // This makes the auto-stop at worst one timeslice (~5s) late, never stuck.
+    this.autoStopAt = null;
+    this.onautostop = null;
   }
 
   get active() {
@@ -92,14 +99,19 @@ export class RecordingSession {
     this.seq = 0;
 
     this.recorder.ondataavailable = (event) => {
-      if (!event.data || event.data.size === 0) return;
-      const seq = this.seq;
-      this.seq += 1;
-      const elapsed = this.elapsedMs;
-      // Serialise writes so chunks commit in order even if one is slow.
-      this.writeChain = this.writeChain
-        .then(() => this.store.appendChunk(this.recording.id, seq, event.data, { durationMs: elapsed }))
-        .catch((error) => this.onerror?.(error));
+      if (event.data && event.data.size > 0) {
+        const seq = this.seq;
+        this.seq += 1;
+        const elapsed = this.elapsedMs;
+        // Serialise writes so chunks commit in order even if one is slow.
+        this.writeChain = this.writeChain
+          .then(() => this.store.appendChunk(this.recording.id, seq, event.data, { durationMs: elapsed }))
+          .catch((error) => this.onerror?.(error));
+      }
+      // Throttle-proof auto-stop backstop (see constructor comment).
+      if (this.autoStopAt && Date.now() >= this.autoStopAt) {
+        this.onautostop?.();
+      }
     };
     this.recorder.onerror = (event) => this.onerror?.(event.error ?? new Error('Recording error'));
 
@@ -137,6 +149,7 @@ export class RecordingSession {
     this.tabStream = null;
     this.audioContext = null;
     this.startedAt = 0;
+    this.autoStopAt = null;
     return row;
   }
 }

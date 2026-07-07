@@ -235,6 +235,29 @@ try {
   console.log(
     `SMOKE OK (adjust): 5min → +1m → ${Math.round(adjust.afterPlus / 1000)}s, big minus clamped to ${adjust.afterMinus}ms and stopped`,
   );
+
+  // Scenario 6: the throttle-proof backstop. Neutralise the page's precise
+  // setTimeout (simulating a background-throttled tab) and confirm the
+  // chunk-arrival check in RecordingSession still stops the take.
+  const backstop = await page.evaluate(async () => {
+    const { RecordingStore } = await import('./lib/db.js');
+    const { RecordingSession } = await import('./lib/recording.js');
+    const store = await RecordingStore.open();
+    const session = new RecordingSession(store);
+    let fired = false;
+    session.onautostop = () => {
+      fired = true;
+      void session.stop();
+    };
+    await session.start({ title: 'backstop-smoke' });
+    session.autoStopAt = Date.now() + 3_000; // deadline before the first 5s chunk
+    await new Promise((resolve) => setTimeout(resolve, 9_000));
+    const [row] = await store.listRecordings();
+    return { fired, status: row.status, durationMs: row.durationMs };
+  });
+  if (!backstop.fired) fail('chunk backstop never fired');
+  if (backstop.status !== 'recorded') fail(`backstop row status ${backstop.status}`);
+  console.log(`SMOKE OK (backstop): chunk check stopped the take at ${backstop.durationMs}ms with no timer`);
 } finally {
   await context.close();
   rmSync(userDataDir, { recursive: true, force: true });

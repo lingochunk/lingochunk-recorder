@@ -93,14 +93,19 @@ try {
     const popupPromise = context.waitForEvent('page', { timeout: 15_000 });
     await page.click('#connect-btn');
     const popup = await popupPromise;
-    await popup.waitForLoadState('domcontentloaded');
-    // Not logged in inside the fresh profile: /connect bounces to /login.
+    // The SPA renders after load; wait for whichever screen appears — the
+    // login form (fresh profile: /connect bounces to /login) or the consent
+    // screen directly.
+    await popup.waitForSelector('#email, #password, button:text("Authorise")', {
+      timeout: 20_000,
+    });
     if (await popup.locator('#email').count()) {
+      log(`popup at ${popup.url()} — logging in`);
       await popup.fill('#email', EMAIL);
       await popup.fill('#password', PASSWORD);
       await popup.click('button[type=submit]');
     }
-    await popup.getByRole('button', { name: 'Authorise' }).click({ timeout: 20_000 });
+    await popup.getByRole('button', { name: 'Authorise' }).click({ timeout: 30_000 });
   } else {
     log('connecting via API-minted token…');
     const cookie = await apiLogin();
@@ -148,13 +153,16 @@ try {
     },
     { timeout: 60_000 },
   );
-  submissionId = await page.evaluate(async () => {
+  const afterUpload = await page.evaluate(async () => {
     const { RecordingStore } = await import('./lib/db.js');
     const store = await RecordingStore.open();
     const [row] = await store.listRecordings();
-    return row.submissionId;
+    return { status: row.status, error: row.error, submissionId: row.submissionId };
   });
-  if (!submissionId) fail('no submissionId after upload');
+  if (afterUpload.status === 'failed' || !afterUpload.submissionId) {
+    fail(`upload failed: ${afterUpload.error ?? 'no submissionId recorded'}`);
+  }
+  submissionId = afterUpload.submissionId;
   log(`uploaded, submission ${submissionId}; waiting for the pipeline…`);
 
   await page.waitForFunction(
@@ -180,17 +188,31 @@ try {
   await context.close();
   rmSync(userDataDir, { recursive: true, force: true });
 
-  // Clean up the test submission unless asked to keep it.
-  if (submissionId && process.env.LC_E2E_KEEP !== '1') {
+  // Clean up the test submission and the tokens this test minted (popup mode
+  // creates a "LingoChunk Recorder" token per run; they would pile up against
+  // the account's active-token cap) unless asked to keep everything.
+  if (process.env.LC_E2E_KEEP !== '1') {
     try {
       const cookie = await apiLogin();
-      const res = await fetch(`${BASE}/api/submissions/${submissionId}`, {
-        method: 'DELETE',
-        headers: { cookie },
-      });
-      log(`cleanup: DELETE submission ${submissionId} → HTTP ${res.status}`);
+      if (submissionId) {
+        const res = await fetch(`${BASE}/api/submissions/${submissionId}`, {
+          method: 'DELETE',
+          headers: { cookie },
+        });
+        log(`cleanup: DELETE submission ${submissionId} → HTTP ${res.status}`);
+      }
+      const tokens = await (await fetch(`${BASE}/api/tokens`, { headers: { cookie } })).json();
+      for (const token of tokens) {
+        if (token.name === 'LingoChunk Recorder' && !token.revoked_at) {
+          const res = await fetch(`${BASE}/api/tokens/${token.id}`, {
+            method: 'DELETE',
+            headers: { cookie },
+          });
+          log(`cleanup: revoked test token ${token.token_prefix}… → HTTP ${res.status}`);
+        }
+      }
     } catch (error) {
-      log(`cleanup failed (delete ${submissionId} manually): ${error.message}`);
+      log(`cleanup failed (tidy the account manually): ${error.message}`);
     }
   }
 }

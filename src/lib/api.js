@@ -43,11 +43,22 @@ export class ApiClient {
     return { Authorization: `Bearer ${this.token}` };
   }
 
+  /** Fetch with Bearer auth and NO ambient cookies. Extension fetches to a
+   *  host with granted permissions would otherwise include the user's
+   *  lingochunk.com session cookie (they just logged in via the connect
+   *  popup), and the server's CSRF middleware rightly blocks cookie-carrying
+   *  cross-origin writes. This API speaks tokens only, so omit cookies. */
+  request(url, init = {}) {
+    return this.fetch(url, {
+      ...init,
+      credentials: 'omit',
+      headers: { ...this.headers(), ...(init.headers ?? {}) },
+    });
+  }
+
   /** The collections the user may publish into: [{slug, name, ...}]. */
   async listCollections() {
-    const response = await this.fetch(`${this.apiBase}/api/v1/collections`, {
-      headers: this.headers(),
-    });
+    const response = await this.request(`${this.apiBase}/api/v1/collections`);
     await raiseForStatus(response);
     return (await response.json()).collections;
   }
@@ -73,9 +84,8 @@ export class ApiClient {
     if (title) form.append('title', title);
     if (collection) form.append('collection', collection);
 
-    const response = await this.fetch(`${this.apiBase}/api/v1/submissions`, {
+    const response = await this.request(`${this.apiBase}/api/v1/submissions`, {
       method: 'POST',
-      headers: this.headers(),
       body: form,
     });
     await raiseForStatus(response);
@@ -84,9 +94,8 @@ export class ApiClient {
 
   /** Processing status: {submission_id, status, progress, step, message, error}. */
   async submissionStatus(submissionId) {
-    const response = await this.fetch(
+    const response = await this.request(
       `${this.apiBase}/api/v1/submissions/${encodeURIComponent(submissionId)}/status`,
-      { headers: this.headers() },
     );
     await raiseForStatus(response);
     return response.json();

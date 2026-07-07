@@ -47,6 +47,13 @@
     <section class="card">
       <h2>New recording</h2>
       <div class="grid-2">
+        <label class="field" id="source-field" hidden>
+          <span class="field-label">Source</span>
+          <select id="source-select">
+            <option value="mic">Microphone only</option>
+            <option value="mic+tab" id="source-tab-option">Microphone + lesson tab</option>
+          </select>
+        </label>
         <label class="field">
           <span class="field-label">Microphone</span>
           <select id="mic-select"></select>
@@ -82,6 +89,7 @@
         </button>
         <span id="timer" class="timer" hidden>0:00</span>
       </div>
+      <p id="tab-hint" class="hint" hidden></p>
       <p class="hint">
         Audio is stored on this device while you record. Nothing is sent to
         LingoChunk until you press Upload.

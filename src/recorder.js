@@ -11,10 +11,12 @@
 
 import { connect } from './lib/auth.js';
 import { ApiClient } from './lib/api.js';
+import { ext } from './lib/env.js';
 import { RecordingStore } from './lib/db.js';
 import { CEFR_LEVELS, LEARNING_LANGUAGES, NATIVE_LANGUAGES } from './lib/languages.js';
 import { RecordingSession, listMicrophones } from './lib/recording.js';
 import { DEFAULT_API_BASE, ensureOriginPermission, getSettings, saveSettings, clearToken } from './lib/settings.js';
+import { captureTabAudio, getArmedLessonTab, tabCaptureAvailable } from './lib/tabaudio.js';
 import { pollProcessing, uploadRecording } from './lib/uploader.js';
 
 const $ = (id) => document.getElementById(id);
@@ -176,6 +178,33 @@ async function refreshMics() {
   );
 }
 
+/** Show/refresh the source picker (Chrome only — Firefox cannot capture tab
+ *  audio, so the field stays hidden and everything records mic-only). */
+async function refreshSourceOptions() {
+  if (!tabCaptureAvailable()) return;
+  $('source-field').hidden = false;
+  const armed = await getArmedLessonTab();
+  const tabOption = $('source-tab-option');
+  const hint = $('tab-hint');
+  if (armed) {
+    const title = armed.title.length > 40 ? `${armed.title.slice(0, 40)}…` : armed.title;
+    tabOption.disabled = false;
+    tabOption.textContent = `Microphone + tab: ${title}`;
+    hint.hidden = $('source-select').value !== 'mic+tab';
+    hint.textContent =
+      'Records you and the lesson tab together. Wear headphones so the ' +
+      "teacher's voice isn't picked up twice.";
+  } else {
+    tabOption.disabled = true;
+    tabOption.textContent = 'Microphone + lesson tab';
+    if ($('source-select').value === 'mic+tab') $('source-select').value = 'mic';
+    hint.hidden = false;
+    hint.textContent =
+      'To record an online lesson too, open its tab and click the ' +
+      'LingoChunk icon there — then pick "Microphone + tab" here.';
+  }
+}
+
 function currentMeta() {
   return {
     title: $('rec-title').value.trim(),
@@ -213,7 +242,30 @@ async function toggleRecording() {
       collection: meta.collection,
       micDeviceId: $('mic-select').value,
     });
-    await session.start(meta, $('mic-select').value);
+
+    // Capture the armed lesson tab when the mic+tab source is selected.
+    let tabStream = null;
+    if (tabCaptureAvailable() && $('source-select').value === 'mic+tab') {
+      const armed = await getArmedLessonTab();
+      if (!armed) {
+        showError(
+          $('record-error'),
+          'The lesson tab is gone. Open it and click the LingoChunk icon there, then try again.',
+        );
+        return;
+      }
+      try {
+        tabStream = await captureTabAudio(armed.tabId);
+      } catch {
+        showError(
+          $('record-error'),
+          'Could not capture the lesson tab. Click the LingoChunk icon on that tab, then try again.',
+        );
+        return;
+      }
+    }
+
+    await session.start(meta, { micDeviceId: $('mic-select').value, tabStream });
     btn.classList.add('recording');
     $('record-label').textContent = 'Stop recording';
     $('timer').hidden = false;
@@ -362,7 +414,10 @@ async function renderRecordings() {
     title.textContent = row.title || 'Untitled recording';
     const meta = document.createElement('span');
     meta.className = 'rec-meta';
-    meta.textContent = `${new Date(row.createdAt).toLocaleString()} · ${fmtDuration(row.durationMs)} · ${fmtSize(row.sizeBytes)} · ${row.learningLanguage}`;
+    meta.textContent =
+      `${new Date(row.createdAt).toLocaleString()} · ${fmtDuration(row.durationMs)} · ` +
+      `${fmtSize(row.sizeBytes)} · ${row.learningLanguage}` +
+      (row.source === 'mic+tab' ? ' · with tab audio' : '');
     const [pillText, pillClass] = STATUS_PILLS[status] ?? [status, 'pill-muted'];
     const pill = document.createElement('span');
     pill.className = `pill ${pillClass}`;
@@ -425,6 +480,13 @@ async function init() {
   store = await RecordingStore.open();
   session = new RecordingSession(store);
   session.onerror = (error) => showError($('record-error'), error.message ?? String(error));
+  // The captured lesson tab closed mid-take: stop gracefully — everything up
+  // to this moment is already chunked in IndexedDB.
+  session.onsourceended = () => {
+    if (!session.active) return;
+    void toggleRecording();
+    showError($('record-error'), 'The lesson tab closed, so the recording was stopped.');
+  };
 
   await store.recoverInterrupted();
 
@@ -434,6 +496,7 @@ async function init() {
   fillSelect($('level-select'), CEFR_LEVELS.map((l) => [l, l]), settings.level);
   renderConnState();
   await refreshMics();
+  await refreshSourceOptions();
   await renderRecordings();
   await loadCollections();
 
@@ -449,6 +512,10 @@ async function init() {
   $('toggle-settings').addEventListener('click', () => {
     $('settings-panel').hidden = !$('settings-panel').hidden;
   });
+  $('source-select').addEventListener('change', () => void refreshSourceOptions());
+  // A toolbar click on a lesson tab (re)arms it while this page is open.
+  ext?.storage?.onChanged?.addListener?.(() => void refreshSourceOptions());
+  window.addEventListener('focus', () => void refreshSourceOptions());
 
   window.addEventListener('beforeunload', (event) => {
     if (session.active) {

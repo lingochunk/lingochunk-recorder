@@ -27,7 +27,7 @@ conversation is in your LingoChunk library with a word-by-word transcript.
 | Record from microphone | yes | yes |
 | Crash-safe local storage, retry upload | yes | yes |
 | One-click connect | yes | yes |
-| Record another tab's audio (online lessons) | planned | not possible (browser limitation) |
+| Record an online lesson (your mic + the lesson tab, mixed) | yes | not possible (browser limitation) |
 
 ## Install
 
@@ -68,6 +68,22 @@ can't read your vocabulary, export decks or touch anything else, and you can
 revoke it at any time in LingoChunk → Settings → API tokens. You can also paste
 a token manually (useful for self-hosted servers; set the server URL in the
 extension's settings panel first).
+
+## Recording an online lesson (Chrome)
+
+For lessons that happen in a browser tab (Google Meet, Zoom web, italki, a
+YouTube video), Chrome can record the tab's audio and your microphone together,
+so both sides of the conversation land in one recording:
+
+1. Open the lesson tab and **click the LingoChunk icon there** (this is what
+   permits the capture — Chrome only allows an extension to record tabs it was
+   invoked on)
+2. In the recorder, choose **Microphone + tab: …** as the source
+3. Record as usual — you'll keep hearing the tab while it's captured
+
+Wear headphones, otherwise the teacher's voice reaches your microphone too and
+ends up in the recording twice. If the lesson tab is closed mid-recording, the
+recording stops gracefully and everything captured so far is kept.
 
 ## Privacy
 
@@ -114,10 +130,9 @@ deliberate choice to keep store review and code audit trivial.
 
 ## Roadmap
 
-- Record a browser tab's audio (Chrome only) and mix it with the microphone,
-  so both sides of an online lesson land in one recording
 - Store listings (Chrome Web Store, Firefox Add-ons)
 - Pause/resume within a recording
+- Per-source volume levels for mic + tab recordings
 
 ## Licence
 

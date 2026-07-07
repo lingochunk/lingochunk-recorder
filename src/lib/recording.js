@@ -22,11 +22,16 @@ export class RecordingSession {
     this.store = store;
     this.recorder = null;
     this.stream = null;
+    this.tabStream = null;
+    this.audioContext = null;
     this.recording = null;
     this.startedAt = 0;
     this.seq = 0;
     this.writeChain = Promise.resolve();
     this.onerror = null;
+    // Fired when an external source (the captured lesson tab) ends mid-take,
+    // so the UI can stop the recording gracefully instead of taping silence.
+    this.onsourceended = null;
   }
 
   get active() {
@@ -37,16 +42,45 @@ export class RecordingSession {
     return this.startedAt ? Date.now() - this.startedAt : 0;
   }
 
-  /** Ask for the mic and start recording into a fresh recording row. */
-  async start(meta, micDeviceId = '') {
+  /**
+   * Ask for the mic and start recording into a fresh recording row.
+   *
+   * With a `tabStream` (captured lesson-tab audio, see tabaudio.js), both
+   * sources are mixed into one track via the Web Audio API. The tab audio is
+   * also played back to the speakers — capturing a tab MUTES it for the user,
+   * and the learner still needs to hear the teacher. The microphone is never
+   * played back (feedback loop).
+   */
+  async start(meta, { micDeviceId = '', tabStream = null } = {}) {
     if (this.active) throw new Error('Already recording');
     const constraints = {
       audio: micDeviceId ? { deviceId: { exact: micDeviceId } } : true,
     };
     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
     const mimeType = pickMimeType();
-    this.recording = await this.store.createRecording({ ...meta, mimeType });
-    this.recorder = new MediaRecorder(this.stream, { mimeType });
+
+    let recordStream = this.stream;
+    if (tabStream) {
+      this.tabStream = tabStream;
+      this.audioContext = new AudioContext();
+      await this.audioContext.resume();
+      const mix = this.audioContext.createMediaStreamDestination();
+      this.audioContext.createMediaStreamSource(this.stream).connect(mix);
+      const tabSource = this.audioContext.createMediaStreamSource(tabStream);
+      tabSource.connect(mix);
+      tabSource.connect(this.audioContext.destination);
+      recordStream = mix.stream;
+      tabStream
+        .getAudioTracks()[0]
+        ?.addEventListener('ended', () => this.onsourceended?.());
+    }
+
+    this.recording = await this.store.createRecording({
+      ...meta,
+      mimeType,
+      source: tabStream ? 'mic+tab' : 'mic',
+    });
+    this.recorder = new MediaRecorder(recordStream, { mimeType });
     this.startedAt = Date.now();
     this.seq = 0;
 
@@ -78,6 +112,14 @@ export class RecordingSession {
     await this.writeChain; // every chunk durably in IndexedDB
 
     this.stream?.getTracks().forEach((track) => track.stop());
+    this.tabStream?.getTracks().forEach((track) => track.stop());
+    if (this.audioContext) {
+      try {
+        await this.audioContext.close();
+      } catch {
+        // Already closed — nothing to release.
+      }
+    }
     const row = await this.store.updateRecording(this.recording.id, {
       status: 'recorded',
       durationMs: this.elapsedMs,
@@ -85,6 +127,8 @@ export class RecordingSession {
 
     this.recorder = null;
     this.stream = null;
+    this.tabStream = null;
+    this.audioContext = null;
     this.startedAt = 0;
     return row;
   }

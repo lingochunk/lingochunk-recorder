@@ -89,6 +89,35 @@ try {
   console.log(
     `SMOKE OK: recorded ${finalRow.durationMs}ms, ${finalRow.blobSize} bytes across ${midRow.chunkCount}+ chunks`,
   );
+
+  // Scenario 2: the mic+tab MIX path. tabCapture needs a real toolbar click,
+  // which automation cannot fake, so exercise RecordingSession's mixing with
+  // a synthetic Web Audio stream standing in for the captured tab.
+  const mix = await page.evaluate(async () => {
+    const { RecordingStore } = await import('./lib/db.js');
+    const { RecordingSession } = await import('./lib/recording.js');
+    const store = await RecordingStore.open();
+    const session = new RecordingSession(store);
+
+    const ctx = new AudioContext();
+    await ctx.resume();
+    const osc = ctx.createOscillator();
+    const synthTab = ctx.createMediaStreamDestination();
+    osc.connect(synthTab);
+    osc.start();
+
+    const rec = await session.start({ title: 'mix-smoke' }, { tabStream: synthTab.stream });
+    await new Promise((resolve) => setTimeout(resolve, 6_500));
+    const row = await session.stop();
+    const blob = await store.assembleBlob(rec.id);
+    osc.stop();
+    await ctx.close();
+    return { status: row.status, source: row.source, blobSize: blob.size, durationMs: row.durationMs };
+  });
+  if (mix.status !== 'recorded') fail(`mix status ${mix.status}`);
+  if (mix.source !== 'mic+tab') fail(`mix source ${mix.source}`);
+  if (mix.blobSize <= 0) fail('mix blob is empty');
+  console.log(`SMOKE OK (mix): recorded ${mix.durationMs}ms, ${mix.blobSize} bytes from mic + synthetic tab`);
 } finally {
   await context.close();
   rmSync(userDataDir, { recursive: true, force: true });

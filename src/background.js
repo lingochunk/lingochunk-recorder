@@ -9,11 +9,20 @@
  */
 
 import { ext } from './lib/env.js';
+import { armLessonTab, tabCaptureAvailable } from './lib/tabaudio.js';
 
 const RECORDER_PATH = 'src/recorder.html';
 
-ext.action.onClicked.addListener(async () => {
+ext.action.onClicked.addListener(async (clickedTab) => {
   const url = ext.runtime.getURL(RECORDER_PATH);
+
+  // Clicking the icon on a web page ARMS that tab for capture (Chrome grants
+  // tab capture only for tabs the extension was invoked on), so "record my
+  // online lesson" is: open the lesson tab, click the icon, press record.
+  if (tabCaptureAvailable() && clickedTab?.url !== url) {
+    await armLessonTab(clickedTab);
+  }
+
   const existing = await ext.tabs.query({ url });
   if (existing.length > 0) {
     const tab = existing[0];

@@ -89,7 +89,9 @@ handles uploads, history, languages and settings, and can also start
 recordings directly.
 
 Set-and-forget options: an **auto-stop timer** (presets from 15 to 90
-minutes, or a custom length — a 12-minute video gets exactly 12 minutes),
+minutes, or a custom length — a 12-minute video gets exactly 12 minutes;
+while recording, a live countdown shows when it will stop, with −1m/+1m
+buttons to nudge it),
 **send automatically** when recording stops, and the completion **email**. With all
 three on, the entire workflow is two clicks: record at the start, and an
 email arrives when the transcript is ready. Recordings that are still only

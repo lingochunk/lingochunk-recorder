@@ -29,6 +29,11 @@ let settings;
 let myTabId; // this recorder tab's id, self-reported to the popup
 let timerInterval = null;
 let autoStopTimeout = null;
+let autoStopDeadline = null; // epoch ms when the take auto-stops, or null
+
+// A minus that would stop in the past clamps to a short grace period, so
+// "−1m" near the end doubles as "wrap it up now".
+const MIN_AUTO_STOP_REMAINING_MS = 5_000;
 const pollers = new Map(); // recordingId -> {stop}
 // Uploads currently in flight. Guards against a double-clicked Upload button
 // firing two POSTs for one recording (= two paid submissions server-side).
@@ -238,6 +243,17 @@ function currentMeta() {
 /** Reflect recording state everywhere: button, timer, and the toolbar badge
  *  (the badge is what tells a user recording from the popup that the take is
  *  still running while they are on another tab). */
+function paintCountdown() {
+  const live = $('autostop-live');
+  if (!session.active || !autoStopDeadline) {
+    live.hidden = true;
+    return;
+  }
+  live.hidden = false;
+  const remaining = Math.max(0, autoStopDeadline - Date.now());
+  $('autostop-countdown').textContent = `stops in ${fmtDuration(remaining)}`;
+}
+
 function setRecordingUi(active) {
   const btn = $('record-btn');
   btn.classList.toggle('recording', active);
@@ -247,8 +263,11 @@ function setRecordingUi(active) {
   if (active) {
     timerInterval = setInterval(() => {
       $('timer').textContent = fmtDuration(session.elapsedMs);
+      paintCountdown();
     }, 500);
     void showRecordingBadge();
+  } else {
+    paintCountdown(); // hides the chip
   }
   // When inactive the badge shows the unsent count; renderRecordings (called
   // after every stop) refreshes it from the store.
@@ -258,9 +277,27 @@ function setRecordingUi(active) {
 function scheduleAutoStop(minutes) {
   clearTimeout(autoStopTimeout);
   autoStopTimeout = null;
+  autoStopDeadline = null;
   const ms = Number(minutes) * 60_000;
   if (!ms || ms <= 0) return;
+  autoStopDeadline = Date.now() + ms;
   autoStopTimeout = setTimeout(() => void handleAutoStop(), ms);
+  paintCountdown();
+}
+
+/** Nudge a running auto-stop by whole minutes. Returns the new remaining ms,
+ *  or null when no countdown is armed. */
+function adjustAutoStop(deltaMinutes) {
+  if (!session.active || !autoStopDeadline) return null;
+  const remaining = Math.max(
+    MIN_AUTO_STOP_REMAINING_MS,
+    autoStopDeadline - Date.now() + Number(deltaMinutes) * 60_000,
+  );
+  autoStopDeadline = Date.now() + remaining;
+  clearTimeout(autoStopTimeout);
+  autoStopTimeout = setTimeout(() => void handleAutoStop(), remaining);
+  paintCountdown();
+  return remaining;
 }
 
 async function handleAutoStop() {
@@ -344,6 +381,7 @@ async function startRecordingMode(mode, { autoStopMinutes } = {}) {
 async function stopRecordingSession() {
   clearTimeout(autoStopTimeout);
   autoStopTimeout = null;
+  autoStopDeadline = null;
   const btn = $('record-btn');
   btn.disabled = true;
   try {
@@ -631,6 +669,8 @@ async function init() {
   }
 
   $('record-btn').addEventListener('click', () => void toggleRecording());
+  $('autostop-minus').addEventListener('click', () => void adjustAutoStop(-1));
+  $('autostop-plus').addEventListener('click', () => void adjustAutoStop(1));
   $('connect-btn').addEventListener('click', () => void handleConnect());
   $('disconnect-btn').addEventListener('click', () => void handleDisconnect());
   $('save-token-btn').addEventListener('click', () => void handleSaveManualToken());
@@ -669,7 +709,17 @@ async function init() {
     }
     (async () => {
       if (message.type === 'rec-status') {
-        sendResponse({ active: session.active, elapsedMs: session.elapsedMs, tabId: myTabId });
+        sendResponse({
+          active: session.active,
+          elapsedMs: session.elapsedMs,
+          autoStopRemainingMs:
+            session.active && autoStopDeadline
+              ? Math.max(0, autoStopDeadline - Date.now())
+              : null,
+          tabId: myTabId,
+        });
+      } else if (message.type === 'rec-adjust') {
+        sendResponse({ ok: true, remainingMs: adjustAutoStop(message.deltaMinutes) });
       } else if (message.type === 'rec-start') {
         const mode = ['mic', 'mic+tab', 'tab'].includes(message.mode) ? message.mode : 'mic';
         sendResponse(

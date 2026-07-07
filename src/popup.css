@@ -44,6 +44,18 @@ body.popup {
   animation: blink 1.2s infinite;
 }
 
+.popup-autostop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px 0 10px;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.btn-mini { padding: 2px 8px; font-size: 0.78rem; border-radius: 6px; }
+
 .popup-saved { font-weight: 600; margin: 4px 0 2px; }
 
 .popup-row {

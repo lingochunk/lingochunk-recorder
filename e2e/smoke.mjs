@@ -200,6 +200,41 @@ try {
     fail(`auto-stop duration ${auto.durationMs}ms outside expected window`);
   }
   console.log(`SMOKE OK (auto-stop): stopped itself after ${auto.durationMs}ms`);
+
+  // Scenario 5: countdown adjustment. Start with 5 minutes, +1, then a big
+  // minus that clamps to the grace period and stops the take within seconds.
+  const adjust = await popup.evaluate(async () => {
+    const status = await chrome.runtime.sendMessage({ type: 'rec-status' });
+    const started = await chrome.runtime.sendMessage({
+      type: 'rec-start',
+      mode: 'mic',
+      autoStopMinutes: 5,
+      tabId: status.tabId,
+    });
+    if (!started?.ok) return { error: `start failed: ${JSON.stringify(started)}` };
+    const s1 = await chrome.runtime.sendMessage({ type: 'rec-status' });
+    const plus = await chrome.runtime.sendMessage({
+      type: 'rec-adjust',
+      deltaMinutes: 1,
+      tabId: status.tabId,
+    });
+    const minus = await chrome.runtime.sendMessage({
+      type: 'rec-adjust',
+      deltaMinutes: -30,
+      tabId: status.tabId,
+    });
+    return { initial: s1.autoStopRemainingMs, afterPlus: plus.remainingMs, afterMinus: minus.remainingMs };
+  });
+  if (adjust.error) fail(adjust.error);
+  if (adjust.initial < 4.5 * 60_000 || adjust.initial > 5 * 60_000) {
+    fail(`initial countdown ${adjust.initial}ms not ~5min`);
+  }
+  if (adjust.afterPlus < adjust.initial) fail('+1m did not extend the countdown');
+  if (adjust.afterMinus > 10_000) fail(`big minus did not clamp (${adjust.afterMinus}ms)`);
+  await page.waitForSelector('#record-btn:not(.recording)', { timeout: 20_000 });
+  console.log(
+    `SMOKE OK (adjust): 5min → +1m → ${Math.round(adjust.afterPlus / 1000)}s, big minus clamped to ${adjust.afterMinus}ms and stopped`,
+  );
 } finally {
   await context.close();
   rmSync(userDataDir, { recursive: true, force: true });

@@ -136,6 +136,16 @@ input:focus, select:focus { outline: none; border-color: var(--blue); }
   margin: 10px 0 0;
 }
 
+.autostop-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.btn-mini { padding: 2px 8px; font-size: 0.78rem; border-radius: 6px; }
+
 .autostop-row { display: flex; gap: 6px; }
 .autostop-row select { flex: 1; min-width: 0; }
 .autostop-row input { width: 72px; }

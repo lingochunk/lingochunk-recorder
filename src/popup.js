@@ -22,6 +22,8 @@ const $ = (id) => document.getElementById(id);
 let timerInterval = null;
 // The recording saved by the last Stop, offered for sending from this popup.
 let lastRecordingId = null;
+// Local mirror of the recorder's auto-stop deadline (epoch ms), or null.
+let countdownDeadline = null;
 
 function showState(name) {
   for (const state of ['idle', 'recording', 'saved', 'sent']) {
@@ -93,13 +95,34 @@ async function openRecorder() {
   window.close();
 }
 
-function startTimer(baseElapsedMs, startedAtMonotonic) {
+function startTimer(baseElapsedMs, startedAtMonotonic, autoStopRemainingMs = null) {
+  countdownDeadline =
+    autoStopRemainingMs && autoStopRemainingMs > 0 ? Date.now() + autoStopRemainingMs : null;
   const paint = () => {
     $('popup-timer').textContent = fmtDuration(baseElapsedMs + (Date.now() - startedAtMonotonic));
+    const live = $('autostop-live');
+    if (countdownDeadline) {
+      live.hidden = false;
+      const remaining = Math.max(0, countdownDeadline - Date.now());
+      $('popup-countdown').textContent =
+        remaining > 0 ? `stops in ${fmtDuration(remaining)}` : 'stopping…';
+    } else {
+      live.hidden = true;
+    }
   };
   paint();
   clearInterval(timerInterval);
   timerInterval = setInterval(paint, 500);
+}
+
+async function adjustCountdown(deltaMinutes) {
+  const reply = await sendToRecorder(
+    { type: 'rec-adjust', deltaMinutes, tabId: recorderTabId },
+    2,
+  );
+  if (reply?.remainingMs != null) {
+    countdownDeadline = Date.now() + reply.remainingMs;
+  }
 }
 
 async function micPermissionGranted() {
@@ -165,7 +188,7 @@ async function startRecording(mode) {
     return;
   }
   showState('recording');
-  startTimer(0, Date.now());
+  startTimer(0, Date.now(), autoStopMinutes > 0 ? autoStopMinutes * 60_000 : null);
 }
 
 async function stopRecording() {
@@ -244,7 +267,7 @@ async function init() {
   const status = await locateRecorder();
   if (status?.active) {
     showState('recording');
-    startTimer(status.elapsedMs ?? 0, Date.now());
+    startTimer(status.elapsedMs ?? 0, Date.now(), status.autoStopRemainingMs);
   } else {
     // Refresh the unsent-reminder badge whenever the popup opens idle (it is
     // the one context guaranteed to run on a toolbar click). Never while
@@ -274,6 +297,8 @@ async function init() {
   $('rec-tabonly-btn').addEventListener('click', () => void startRecording('tab'));
   $('rec-mic-btn').addEventListener('click', () => void startRecording('mic'));
   $('stop-btn').addEventListener('click', () => void stopRecording());
+  $('autostop-minus').addEventListener('click', () => void adjustCountdown(-1));
+  $('autostop-plus').addEventListener('click', () => void adjustCountdown(1));
   $('send-btn').addEventListener('click', () => void sendLastRecording());
   $('open-recorder').addEventListener('click', () => void openRecorder());
 }

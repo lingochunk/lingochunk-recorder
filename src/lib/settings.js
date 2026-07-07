@@ -22,6 +22,10 @@ const DEFAULTS = {
   micDeviceId: '',
   // Completion email is OPT-IN: off until the user ticks it, then sticky.
   notifyDefault: false,
+  // Auto-stop preset in minutes (0 = record until stopped) and whether a
+  // finished recording is sent to LingoChunk without asking. Both sticky.
+  autoStopMinutes: 0,
+  autoSend: false,
 };
 
 export async function getSettings() {

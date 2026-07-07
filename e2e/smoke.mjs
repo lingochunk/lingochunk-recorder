@@ -149,6 +149,32 @@ try {
   if (remote.source !== 'mic') fail(`popup-driven source ${remote.source}`);
   if (remote.sizeBytes <= 0) fail('popup-driven recording is empty');
   console.log(`SMOKE OK (popup): remote-controlled recording of ${remote.sizeBytes} bytes`);
+
+  // Scenario 4: auto-stop. Start via message with a tiny autoStopMinutes
+  // (the UI offers 15m+; the engine takes any number) and assert the
+  // recording stops itself and lands as `recorded`.
+  const started = await popup.evaluate(async () => {
+    const status = await chrome.runtime.sendMessage({ type: 'rec-status' });
+    return chrome.runtime.sendMessage({
+      type: 'rec-start',
+      mode: 'mic',
+      autoStopMinutes: 0.1, // 6 seconds
+      tabId: status.tabId,
+    });
+  });
+  if (!started?.ok) fail(`auto-stop start failed: ${JSON.stringify(started)}`);
+  await page.waitForSelector('#record-btn:not(.recording)', { timeout: 20_000 });
+  const auto = await page.evaluate(async () => {
+    const { RecordingStore } = await import('./lib/db.js');
+    const store = await RecordingStore.open();
+    const [row] = await store.listRecordings();
+    return { status: row.status, durationMs: row.durationMs };
+  });
+  if (auto.status !== 'recorded') fail(`auto-stopped status ${auto.status}`);
+  if (auto.durationMs < 5_000 || auto.durationMs > 15_000) {
+    fail(`auto-stop duration ${auto.durationMs}ms outside expected window`);
+  }
+  console.log(`SMOKE OK (auto-stop): stopped itself after ${auto.durationMs}ms`);
 } finally {
   await context.close();
   rmSync(userDataDir, { recursive: true, force: true });

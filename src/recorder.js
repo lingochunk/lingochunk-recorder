@@ -11,6 +11,8 @@
 
 import { connect } from './lib/auth.js';
 import { ApiClient } from './lib/api.js';
+import { showRecordingBadge, showUnsentBadge } from './lib/badge.js';
+import { AUTO_STOP_OPTIONS } from './lib/durations.js';
 import { ext } from './lib/env.js';
 import { RecordingStore } from './lib/db.js';
 import { CEFR_LEVELS, LEARNING_LANGUAGES, NATIVE_LANGUAGES } from './lib/languages.js';
@@ -26,6 +28,7 @@ let session;
 let settings;
 let myTabId; // this recorder tab's id, self-reported to the popup
 let timerInterval = null;
+let autoStopTimeout = null;
 const pollers = new Map(); // recordingId -> {stop}
 // Uploads currently in flight. Guards against a double-clicked Upload button
 // firing two POSTs for one recording (= two paid submissions server-side).
@@ -230,17 +233,32 @@ function setRecordingUi(active) {
     timerInterval = setInterval(() => {
       $('timer').textContent = fmtDuration(session.elapsedMs);
     }, 500);
+    void showRecordingBadge();
   }
-  void setRecBadge(active);
+  // When inactive the badge shows the unsent count; renderRecordings (called
+  // after every stop) refreshes it from the store.
 }
 
-async function setRecBadge(on) {
-  try {
-    await ext.action.setBadgeBackgroundColor({ color: '#C53030' });
-    await ext.action.setBadgeText({ text: on ? 'REC' : '' });
-  } catch {
-    // Badge is decoration; never let it break recording.
-  }
+/** Arm the auto-stop timer for this take (0/undefined = record until stopped). */
+function scheduleAutoStop(minutes) {
+  clearTimeout(autoStopTimeout);
+  autoStopTimeout = null;
+  const ms = Number(minutes) * 60_000;
+  if (!ms || ms <= 0) return;
+  autoStopTimeout = setTimeout(() => void handleAutoStop(), ms);
+}
+
+async function handleAutoStop() {
+  if (!session.active) return;
+  const row = await stopRecordingSession();
+  await maybeAutoSend(row);
+}
+
+/** Send a just-stopped recording without asking, when the user opted in. */
+async function maybeAutoSend(row) {
+  if (!row || !settings.autoSend || !settings.token) return false;
+  void sendRecording(row.id); // fire and forget; row/badge reflect progress
+  return true;
 }
 
 /**
@@ -249,7 +267,7 @@ async function setRecBadge(on) {
  * {ok: true} or {error} rather than throwing, so the popup can show the
  * message verbatim.
  */
-async function startRecordingMode(mode) {
+async function startRecordingMode(mode, { autoStopMinutes } = {}) {
   if (session.active) return { error: 'Already recording.' };
 
   const meta = currentMeta();
@@ -298,12 +316,15 @@ async function startRecordingMode(mode) {
   }
 
   setRecordingUi(true);
+  scheduleAutoStop(autoStopMinutes);
   void refreshMics(); // labels become available after the first grant
   void renderRecordings();
   return { ok: true };
 }
 
 async function stopRecordingSession() {
+  clearTimeout(autoStopTimeout);
+  autoStopTimeout = null;
   const btn = $('record-btn');
   btn.disabled = true;
   try {
@@ -318,12 +339,15 @@ async function stopRecordingSession() {
 async function toggleRecording() {
   showError($('record-error'), null);
   if (session.active) {
-    await stopRecordingSession();
+    const row = await stopRecordingSession();
+    await maybeAutoSend(row);
     return;
   }
   const mode =
     tabCaptureAvailable() && $('source-select').value === 'mic+tab' ? 'mic+tab' : 'mic';
-  const result = await startRecordingMode(mode);
+  const result = await startRecordingMode(mode, {
+    autoStopMinutes: Number($('autostop-select').value),
+  });
   if (result.error) showError($('record-error'), result.error);
 }
 
@@ -527,6 +551,9 @@ async function renderRecordings() {
     li.append(actions);
     list.append(li);
   }
+
+  // The reminder badge: how many recordings sit on this device unsent.
+  if (!session?.active) void showUnsentBadge(rows);
 }
 
 // ---------------------------------------------------------------------------
@@ -552,6 +579,15 @@ async function init() {
   $('notify-check').checked = settings.notifyDefault;
   $('notify-check').addEventListener('change', () => {
     void saveSettings({ notifyDefault: $('notify-check').checked });
+  });
+  $('autosend-check').checked = settings.autoSend;
+  $('autosend-check').addEventListener('change', () => {
+    settings = { ...settings, autoSend: $('autosend-check').checked };
+    void saveSettings({ autoSend: settings.autoSend });
+  });
+  fillSelect($('autostop-select'), AUTO_STOP_OPTIONS, String(settings.autoStopMinutes));
+  $('autostop-select').addEventListener('change', () => {
+    void saveSettings({ autoStopMinutes: Number($('autostop-select').value) });
   });
   fillSelect($('learning-lang'), LEARNING_LANGUAGES, settings.learningLanguage);
   fillSelect($('native-lang'), NATIVE_LANGUAGES, settings.nativeLanguage);
@@ -608,13 +644,18 @@ async function init() {
       if (message.type === 'rec-status') {
         sendResponse({ active: session.active, elapsedMs: session.elapsedMs, tabId: myTabId });
       } else if (message.type === 'rec-start') {
-        sendResponse(await startRecordingMode(message.mode === 'mic+tab' ? 'mic+tab' : 'mic'));
+        sendResponse(
+          await startRecordingMode(message.mode === 'mic+tab' ? 'mic+tab' : 'mic', {
+            autoStopMinutes: message.autoStopMinutes,
+          }),
+        );
       } else if (message.type === 'rec-stop') {
         if (!session.active) {
           sendResponse({ error: 'Not recording.' });
         } else {
           const row = await stopRecordingSession();
-          sendResponse({ ok: true, recordingId: row?.id });
+          const autoSent = await maybeAutoSend(row);
+          sendResponse({ ok: true, recordingId: row?.id, autoSent });
         }
       } else if (message.type === 'rec-send') {
         if (!message.recordingId) {

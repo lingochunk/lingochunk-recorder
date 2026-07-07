@@ -46,6 +46,16 @@ body.popup {
 
 .popup-saved { font-weight: 600; margin: 4px 0 2px; }
 
+.popup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.popup-row select { flex: 1; padding: 5px 8px; font-size: 0.85rem; }
+
 .popup-footer {
   margin-top: 12px;
   padding-top: 10px;

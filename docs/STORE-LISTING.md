@@ -30,8 +30,10 @@ disclosures, which are legal statements by the publisher.
 > • Recording is local-first: audio is saved on your device every few seconds
 >   while you record, so a crash loses seconds, not the hour — and nothing is
 >   sent anywhere until you press "Send to LingoChunk"
-> • Failed sends stay on your device for retry; optional email when
->   processing finishes
+> • Set-and-forget: auto-stop after your lesson length (15–90 min), optional
+>   automatic send, and an optional email when processing finishes
+> • Failed sends stay on your device for retry; a badge on the icon reminds
+>   you of recordings not yet sent
 >
 > YOU NEED a free LingoChunk account (https://lingochunk.com). Connecting is
 > one click and creates a narrowly-scoped access token you can revoke at any

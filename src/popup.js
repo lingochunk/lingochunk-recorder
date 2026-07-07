@@ -9,6 +9,9 @@
  * popup mid-recording is fine by design.
  */
 
+import { showUnsentBadge } from './lib/badge.js';
+import { RecordingStore } from './lib/db.js';
+import { AUTO_STOP_OPTIONS } from './lib/durations.js';
 import { ext } from './lib/env.js';
 import { getSettings, saveSettings } from './lib/settings.js';
 import { armLessonTab, tabCaptureAvailable } from './lib/tabaudio.js';
@@ -137,7 +140,14 @@ async function startRecording(mode) {
     startTimer(status.elapsedMs ?? 0, Date.now());
     return;
   }
-  const reply = await sendToRecorder({ type: 'rec-start', mode, tabId: recorderTabId });
+  const autoStopMinutes = Number($('autostop-select').value);
+  void saveSettings({ autoStopMinutes });
+  const reply = await sendToRecorder({
+    type: 'rec-start',
+    mode,
+    autoStopMinutes,
+    tabId: recorderTabId,
+  });
   if (!reply) {
     showError('The recorder did not respond. Open it and try from there.');
     return;
@@ -159,6 +169,13 @@ async function stopRecording() {
     return;
   }
   lastRecordingId = reply.recordingId ?? null;
+  if (reply.autoSent) {
+    // The recorder is already sending it (auto-send is on) — no prompt needed.
+    $('sent-hint').textContent =
+      'It will appear in your LingoChunk library when processing finishes.';
+    showState('sent');
+    return;
+  }
   showState('saved');
 }
 
@@ -192,9 +209,21 @@ async function sendLastRecording() {
   }
 }
 
+function fillSelect(select, pairs, selected) {
+  select.replaceChildren();
+  for (const [value, label] of pairs) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === selected;
+    select.append(option);
+  }
+}
+
 async function init() {
   const settings = await getSettings();
   $('notify-check').checked = settings.notifyDefault;
+  fillSelect($('autostop-select'), AUTO_STOP_OPTIONS, String(settings.autoStopMinutes));
 
   // Mirror the recorder's live state, if one is open.
   const status = await locateRecorder();
@@ -202,6 +231,15 @@ async function init() {
     showState('recording');
     startTimer(status.elapsedMs ?? 0, Date.now());
   } else {
+    // Refresh the unsent-reminder badge whenever the popup opens idle (it is
+    // the one context guaranteed to run on a toolbar click). Never while
+    // recording — that would clobber the REC badge.
+    try {
+      const store = await RecordingStore.open();
+      void showUnsentBadge(await store.listRecordings());
+    } catch {
+      // First run — no database yet.
+    }
     showState('idle');
     const tab = await activeTab();
     const capturable =

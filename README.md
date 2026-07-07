@@ -86,6 +86,13 @@ icon again offers Stop. The full recorder page (icon → **Open recorder**)
 handles uploads, history, languages and settings, and can also start
 recordings directly.
 
+Set-and-forget options: an **auto-stop timer** (15–90 minutes — set it to
+your lesson length and never tape an hour of empty room), **send
+automatically** when recording stops, and the completion **email**. With all
+three on, the entire workflow is two clicks: record at the start, and an
+email arrives when the transcript is ready. Recordings that are still only
+on this device show as a count on the toolbar icon so nothing is forgotten.
+
 Notes for tab recordings: wear headphones, otherwise the teacher's voice
 reaches your microphone and ends up in the recording twice. You keep hearing
 the tab while it's captured. If the lesson tab closes mid-recording, the
@@ -141,6 +148,11 @@ deliberate choice to keep store review and code audit trivial.
 - Store listings (Chrome Web Store, Firefox Add-ons)
 - Pause/resume within a recording
 - Per-source volume levels for mic + tab recordings
+
+## Project layout note
+
+`src/background.js` exists solely to restore the unsent-recordings badge
+after a browser restart; all real logic lives in the popup and recorder page.
 
 ## Licence
 

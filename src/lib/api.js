@@ -75,6 +75,7 @@ export class ApiClient {
     level,
     title,
     collection,
+    notify,
   }) {
     const form = new FormData();
     form.append('audio', blob, filename);
@@ -83,6 +84,7 @@ export class ApiClient {
     form.append('level', level);
     if (title) form.append('title', title);
     if (collection) form.append('collection', collection);
+    if (notify) form.append('notify', 'true');
 
     const response = await this.request(`${this.apiBase}/api/v1/submissions`, {
       method: 'POST',

@@ -132,6 +132,13 @@ try {
   await popup.click('#stop-btn');
   await popup.waitForSelector('#state-saved:not([hidden])', { timeout: 10_000 });
 
+  // Send from the popup without a connected account: the recorder must answer
+  // with a clear error rather than silently failing (no server in this test).
+  await popup.click('#send-btn');
+  await popup.waitForSelector('#popup-error:not([hidden])', { timeout: 10_000 });
+  const sendError = await popup.textContent('#popup-error');
+  if (!/not connected/i.test(sendError)) fail(`unexpected send error: "${sendError}"`);
+
   const remote = await page.evaluate(async () => {
     const { RecordingStore } = await import('./lib/db.js');
     const store = await RecordingStore.open();

@@ -70,6 +70,7 @@ export async function uploadRecording(store, api, recordingId) {
         level: recording.level,
         title: recording.title,
         collection: recording.collection,
+        notify: Boolean(recording.notify),
       }),
     );
     return await store.updateRecording(recordingId, {

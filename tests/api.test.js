@@ -54,10 +54,26 @@ describe('ApiClient', () => {
       level: 'A2',
       title: '',
       collection: '',
+      notify: false,
     });
     const form = fetchMock.mock.calls[0][1].body;
     expect(form.has('title')).toBe(false);
     expect(form.has('collection')).toBe(false);
+    expect(form.has('notify')).toBe(false);
+  });
+
+  it('sends notify=true when the completion email is requested', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({ submission_id: 's', job_id: 'j', status: 'queued' }));
+    const client = new ApiClient('https://lingochunk.com', 'lcp_t', fetchMock);
+    await client.createSubmission({
+      blob: new Blob(['a']),
+      filename: 'r.webm',
+      learningLanguage: 'de',
+      nativeLanguage: 'en',
+      level: 'A2',
+      notify: true,
+    });
+    expect(fetchMock.mock.calls[0][1].body.get('notify')).toBe('true');
   });
 
   it('surfaces the server detail and code on errors', async () => {

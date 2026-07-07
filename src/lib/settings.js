@@ -20,6 +20,8 @@ const DEFAULTS = {
   level: 'A2',
   collection: '',
   micDeviceId: '',
+  // Completion email is OPT-IN: off until the user ticks it, then sticky.
+  notifyDefault: false,
 };
 
 export async function getSettings() {

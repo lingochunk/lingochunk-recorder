@@ -100,6 +100,17 @@ describe('uploadRecording', () => {
     const sent = api.createSubmission.mock.calls[0][0];
     expect(sent.learningLanguage).toBe('de');
     expect(sent.blob.size).toBeGreaterThan(0);
+    expect(sent.notify).toBe(false);
+  });
+
+  it('passes the recording notify flag through to the API', async () => {
+    const rec = await seedRecording();
+    await store.updateRecording(rec.id, { notify: true });
+    const api = {
+      createSubmission: vi.fn().mockResolvedValue({ submission_id: 's1', job_id: 'j1', status: 'queued' }),
+    };
+    await uploadRecording(store, api, rec.id);
+    expect(api.createSubmission.mock.calls[0][0].notify).toBe(true);
   });
 
   it('parks the row in failed with the server message on a permanent error', async () => {

@@ -35,10 +35,21 @@
     <p class="hint">Recording continues if you close this popup.</p>
   </div>
 
-  <!-- stopped -->
+  <!-- stopped: offer to send right here -->
   <div id="state-saved" hidden>
     <p class="popup-saved">Saved on this device.</p>
-    <p class="hint">Open the recorder to send it to LingoChunk.</p>
+    <label class="checkbox-row">
+      <input id="notify-check" type="checkbox" />
+      <span>Email me when it's ready</span>
+    </label>
+    <button id="send-btn" class="btn btn-record popup-btn" type="button">Send to LingoChunk</button>
+    <p class="hint">Or keep it on this device — it stays in the recorder.</p>
+  </div>
+
+  <!-- sent -->
+  <div id="state-sent" hidden>
+    <p class="popup-saved">Sent — processing on LingoChunk.</p>
+    <p id="sent-hint" class="hint"></p>
   </div>
 
   <p id="popup-error" class="error" hidden></p>

@@ -136,6 +136,17 @@ input:focus, select:focus { outline: none; border-color: var(--blue); }
   margin: 10px 0 0;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: var(--ink-light);
+  cursor: pointer;
+}
+.checkbox-row input { accent-color: var(--blue); }
+
 .manual-token { margin-top: 12px; }
 .manual-token summary { cursor: pointer; color: var(--ink-faint); font-size: 0.85rem; }
 .manual-token input { flex: 1; }

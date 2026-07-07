@@ -213,6 +213,7 @@ function currentMeta() {
     nativeLanguage: $('native-lang').value,
     level: $('level-select').value,
     collection: $('collection-select').value,
+    notify: $('notify-check').checked,
   };
 }
 
@@ -348,24 +349,35 @@ function actionButton(label, onClick, className = 'btn btn-small') {
   return btn;
 }
 
+/** Send one recording. Shared by the page's button and the popup's rec-send
+ *  message; returns {ok} or {error} (the row is also parked in `failed` with
+ *  the message, so the page UI needs nothing further). */
+async function sendRecording(recordingId) {
+  if (inFlightUploads.has(recordingId)) return { ok: true };
+  if (!settings.token) {
+    return { error: 'Not connected. Open the recorder and connect to LingoChunk first.' };
+  }
+  inFlightUploads.add(recordingId);
+  await renderRecordings(); // repaint immediately: the send button goes away
+  try {
+    const row = await uploadRecording(store, api(), recordingId);
+    startPolling(row);
+    return { ok: true };
+  } catch (error) {
+    return { error: error.message ?? String(error) };
+  } finally {
+    inFlightUploads.delete(recordingId);
+    await renderRecordings();
+  }
+}
+
 async function handleUpload(recordingId) {
-  if (inFlightUploads.has(recordingId)) return;
   if (!settings.token) {
     $('settings-panel').hidden = false;
     showError($('settings-error'), 'Connect to LingoChunk first, then send.');
     return;
   }
-  inFlightUploads.add(recordingId);
-  await renderRecordings(); // repaint immediately: Upload button gone
-  try {
-    const row = await uploadRecording(store, api(), recordingId);
-    startPolling(row);
-  } catch {
-    // Row already parked in `failed` with the server message.
-  } finally {
-    inFlightUploads.delete(recordingId);
-    await renderRecordings();
-  }
+  await sendRecording(recordingId);
 }
 
 function startPolling(row) {
@@ -537,6 +549,10 @@ async function init() {
   await store.recoverInterrupted();
 
   $('api-base').value = settings.apiBase;
+  $('notify-check').checked = settings.notifyDefault;
+  $('notify-check').addEventListener('change', () => {
+    void saveSettings({ notifyDefault: $('notify-check').checked });
+  });
   fillSelect($('learning-lang'), LEARNING_LANGUAGES, settings.learningLanguage);
   fillSelect($('native-lang'), NATIVE_LANGUAGES, settings.nativeLanguage);
   fillSelect($('level-select'), CEFR_LEVELS.map((l) => [l, l]), settings.level);
@@ -599,6 +615,16 @@ async function init() {
         } else {
           const row = await stopRecordingSession();
           sendResponse({ ok: true, recordingId: row?.id });
+        }
+      } else if (message.type === 'rec-send') {
+        if (!message.recordingId) {
+          sendResponse({ error: 'Nothing to send.' });
+        } else {
+          // The popup's per-recording choice for the completion email.
+          await store.updateRecording(message.recordingId, {
+            notify: Boolean(message.notify),
+          });
+          sendResponse(await sendRecording(message.recordingId));
         }
       } else {
         sendResponse({ error: 'Unknown command.' });

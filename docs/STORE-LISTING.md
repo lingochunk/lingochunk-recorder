@@ -1,14 +1,14 @@
 # Store listing copy
 
 Paste-ready content for the Chrome Web Store (and, with minor trims, AMO).
-Assets live in `docs/store/`. Review before submitting — especially the data
+Assets live in `docs/store/`. Review before submitting - especially the data
 disclosures, which are legal statements by the publisher.
 
 ## Basics
 
 - **Name**: LingoChunk Recorder
 - **Summary** (short description, ≤132 chars):
-  > Record language lessons — from your mic or a lesson tab — and send them to LingoChunk for transcripts and Anki flashcards.
+  > Record language lessons - from your mic or a lesson tab - and send them to LingoChunk for transcripts and Anki flashcards.
 - **Category**: Education
 - **Language**: English
 - **Privacy policy URL**: https://lingochunk.com/privacy
@@ -19,18 +19,18 @@ disclosures, which are legal statements by the publisher.
 > Press record at the start of your language lesson, press stop at the end,
 > and send it to your LingoChunk account. A little later the whole
 > conversation is in your library as an interactive, word-by-word transcript
-> with native audio — ready for listening practice and Anki flashcards.
+> with native audio - ready for listening practice and Anki flashcards.
 >
 > WHAT IT DOES
-> • Records your microphone — for in-person lessons, tutoring sessions or
+> • Records your microphone - for in-person lessons, tutoring sessions or
 >   recording yourself
 > • Records an online lesson in one click: your microphone and the lesson's
->   browser tab (Google Meet, Zoom web, italki, YouTube…) are mixed into a
+>   browser tab (Google Meet, Zoom web, italki and similar) are mixed into a
 >   single recording, and you never have to leave the tab
-> • Or records just the tab — a video or podcast — without switching your
->   microphone on at all
+> • Or records just the lesson tab, without switching your microphone on at
+>   all
 > • Recording is local-first: audio is saved on your device every few seconds
->   while you record, so a crash loses seconds, not the hour — and nothing is
+>   while you record, so a crash loses seconds, not the hour - and nothing is
 >   sent anywhere until you press "Send to LingoChunk"
 > • Set-and-forget: auto-stop after your lesson length (presets or a custom
 >   number of minutes), optional automatic send, and an optional email when
@@ -53,12 +53,12 @@ disclosures, which are legal statements by the publisher.
   mixed with a lesson tab's audio) and upload it to the user's own LingoChunk
   account for language-learning processing.
 - **Permission justifications**:
-  - `storage` — keeps recordings on-device until sent, plus user settings
-  - `identity` — one-click account connection via LingoChunk's authorise page
-  - `tabCapture` — records the lesson tab's audio when the user picks
+  - `storage` - keeps recordings on-device until sent, plus user settings
+  - `identity` - one-click account connection via LingoChunk's authorise page
+  - `tabCapture` - records the lesson tab's audio when the user picks
     "Record mic + this tab"
-  - Host `lingochunk.com` — uploading recordings to the user's account
-  - Optional host permissions — only requested if the user configures a
+  - Host `lingochunk.com` - uploading recordings to the user's account
+  - Optional host permissions - only requested if the user configures a
     self-hosted LingoChunk server
 - **Data usage disclosures** (tick and phrase to match the console's wording):
   - Collects: *Personal communications* (audio the user records) and

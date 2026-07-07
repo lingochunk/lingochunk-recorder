@@ -89,25 +89,25 @@ try {
   await page.fill('#api-base', BASE);
 
   if (AUTH_MODE === 'popup') {
-    log('connecting via the real launchWebAuthFlow popup…');
+    log('connecting via the real launchWebAuthFlow popup...');
     const popupPromise = context.waitForEvent('page', { timeout: 15_000 });
     await page.click('#connect-btn');
     const popup = await popupPromise;
-    // The SPA renders after load; wait for whichever screen appears — the
+    // The SPA renders after load; wait for whichever screen appears - the
     // login form (fresh profile: /connect bounces to /login) or the consent
     // screen directly.
     await popup.waitForSelector('#email, #password, button:text("Authorise")', {
       timeout: 20_000,
     });
     if (await popup.locator('#email').count()) {
-      log(`popup at ${popup.url()} — logging in`);
+      log(`popup at ${popup.url()} - logging in`);
       await popup.fill('#email', EMAIL);
       await popup.fill('#password', PASSWORD);
       await popup.click('button[type=submit]');
     }
     await popup.getByRole('button', { name: 'Authorise' }).click({ timeout: 30_000 });
   } else {
-    log('connecting via API-minted token…');
+    log('connecting via API-minted token...');
     const cookie = await apiLogin();
     const res = await fetch(`${BASE}/api/tokens`, {
       method: 'POST',
@@ -135,7 +135,7 @@ try {
   await page.selectOption('#native-lang', 'en');
   await page.click('#record-btn');
   await page.waitForSelector('#record-btn.recording', { timeout: 5_000 });
-  log(`recording ${RECORD_SECONDS}s of speech from the fake mic…`);
+  log(`recording ${RECORD_SECONDS}s of speech from the fake mic...`);
   await page.waitForTimeout(RECORD_SECONDS * 1000);
   await page.click('#record-btn');
   await page.waitForSelector('#record-btn:not(.recording)', { timeout: 10_000 });
@@ -149,7 +149,7 @@ try {
   await page.waitForFunction(
     () => {
       const t = document.querySelector('#recordings .pill')?.textContent;
-      return t === 'Processing…' || t === 'In your library' || t === 'Failed';
+      return t === 'Processing...' || t === 'In your library' || t === 'Failed';
     },
     { timeout: 60_000 },
   );
@@ -163,7 +163,7 @@ try {
     fail(`upload failed: ${afterUpload.error ?? 'no submissionId recorded'}`);
   }
   submissionId = afterUpload.submissionId;
-  log(`uploaded, submission ${submissionId}; waiting for the pipeline…`);
+  log(`uploaded, submission ${submissionId}; waiting for the pipeline...`);
 
   await page.waitForFunction(
     () => {
@@ -208,7 +208,7 @@ try {
             method: 'DELETE',
             headers: { cookie },
           });
-          log(`cleanup: revoked test token ${token.token_prefix}… → HTTP ${res.status}`);
+          log(`cleanup: revoked test token ${token.token_prefix}... → HTTP ${res.status}`);
         }
       }
     } catch (error) {

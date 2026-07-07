@@ -36,7 +36,7 @@ let autoStopFiring = false; // guards the timeout + chunk-backstop double fire
 let lastStopped = null; // {recordingId, autoSent}
 
 // A minus that would stop in the past clamps to a short grace period, so
-// "−1m" near the end doubles as "wrap it up now".
+// "-1m" near the end doubles as "wrap it up now".
 const MIN_AUTO_STOP_REMAINING_MS = 5_000;
 const pollers = new Map(); // recordingId -> {stop}
 // Uploads currently in flight. Guards against a double-clicked Upload button
@@ -130,7 +130,7 @@ async function handleSaveManualToken() {
   const token = $('manual-token').value.trim();
   const apiBase = ($('api-base').value.trim() || DEFAULT_API_BASE).replace(/\/+$/, '');
   if (!token.startsWith('lcp_')) {
-    showError($('settings-error'), 'That does not look like a LingoChunk token (lcp_…).');
+    showError($('settings-error'), 'That does not look like a LingoChunk token (lcp_...).');
     return;
   }
   const granted = await ensureOriginPermission(apiBase);
@@ -164,7 +164,7 @@ async function loadCollections() {
     select.replaceChildren();
     const none = document.createElement('option');
     none.value = '';
-    none.textContent = '— none —';
+    none.textContent = '(none)';
     select.append(none);
     for (const c of collections) {
       const option = document.createElement('option');
@@ -191,7 +191,7 @@ async function refreshMics() {
   );
 }
 
-/** Show/refresh the source picker (Chrome only — Firefox cannot capture tab
+/** Show/refresh the source picker (Chrome only - Firefox cannot capture tab
  *  audio, so the field stays hidden and everything records mic-only). */
 async function refreshSourceOptions() {
   if (!tabCaptureAvailable()) return;
@@ -201,7 +201,7 @@ async function refreshSourceOptions() {
   const tabOnlyOption = $('source-tabonly-option');
   const hint = $('tab-hint');
   if (armed) {
-    const title = armed.title.length > 40 ? `${armed.title.slice(0, 40)}…` : armed.title;
+    const title = armed.title.length > 40 ? `${armed.title.slice(0, 40)}...` : armed.title;
     tabOption.disabled = false;
     tabOption.textContent = `Microphone + tab: ${title}`;
     tabOnlyOption.disabled = false;
@@ -209,7 +209,7 @@ async function refreshSourceOptions() {
     hint.hidden = $('source-select').value === 'mic';
     hint.textContent =
       $('source-select').value === 'tab'
-        ? 'Records only the tab — your microphone stays off.'
+        ? 'Records only the tab. Your microphone stays off.'
         : 'Records you and the lesson tab together. Wear headphones so the ' +
           "teacher's voice isn't picked up twice.";
   } else {
@@ -221,7 +221,7 @@ async function refreshSourceOptions() {
     hint.hidden = false;
     hint.textContent =
       'To record an online lesson too, open its tab and click the ' +
-      'LingoChunk icon there — then pick a tab source here.';
+      'LingoChunk icon there, then pick a tab source here.';
   }
 }
 
@@ -430,10 +430,10 @@ async function toggleRecording() {
 // ---------------------------------------------------------------------------
 
 const STATUS_PILLS = {
-  recording: ['Recording…', 'pill-red'],
+  recording: ['Recording...', 'pill-red'],
   recorded: ['Ready to send', 'pill-blue'],
-  uploading: ['Sending…', 'pill-blue'],
-  processing: ['Processing…', 'pill-blue'],
+  uploading: ['Sending...', 'pill-blue'],
+  processing: ['Processing...', 'pill-blue'],
   uploaded: ['In your library', 'pill-green'],
   failed: ['Failed', 'pill-red'],
 };
@@ -496,16 +496,16 @@ function startPolling(row) {
       } else {
         const line = document.querySelector(`[data-status-for="${row.id}"]`);
         if (line) {
-          line.textContent = `${body.step || 'processing'} — ${body.progress ?? 0}%`;
+          line.textContent = `${body.step || 'processing'} - ${body.progress ?? 0}%`;
         }
       }
     },
   });
   pollers.set(row.id, poller);
   // A permanent poll error (revoked token, deleted submission) must not
-  // strand the row at "Processing…" as an unhandled rejection. Park it as
+  // strand the row at "Processing..." as an unhandled rejection. Park it as
   // failed; the row keeps its submissionId, so the UI offers "Check status"
-  // (resume polling) rather than "Retry upload" — the audio was already
+  // (resume polling) rather than "Retry upload" - the audio was already
   // uploaded and re-posting it would duplicate the submission.
   poller.promise.catch(async (error) => {
     pollers.delete(row.id);
@@ -556,7 +556,7 @@ async function renderRecordings() {
   for (const row of rows) {
     const li = document.createElement('li');
     // A row whose upload is in flight renders as uploading even if the store
-    // still says `recorded` — the guard set is the truth for button state.
+    // still says `recorded` - the guard set is the truth for button state.
     const status = inFlightUploads.has(row.id) ? 'uploading' : row.status;
 
     const head = document.createElement('div');
@@ -582,7 +582,7 @@ async function renderRecordings() {
       const line = document.createElement('div');
       line.className = 'rec-status-line';
       line.dataset.statusFor = row.id;
-      line.textContent = 'processing…';
+      line.textContent = 'processing...';
       li.append(line);
     }
     if (status === 'failed' && row.error) {
@@ -640,7 +640,7 @@ async function init() {
   store = await RecordingStore.open();
   session = new RecordingSession(store);
   session.onerror = (error) => showError($('record-error'), error.message ?? String(error));
-  // The captured lesson tab closed mid-take: stop gracefully — everything up
+  // The captured lesson tab closed mid-take: stop gracefully - everything up
   // to this moment is already chunked in IndexedDB.
   session.onsourceended = () => {
     if (!session.active) return;

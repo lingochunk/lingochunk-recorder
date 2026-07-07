@@ -5,7 +5,7 @@
  * blue count of recordings sitting on this device that were never sent
  * ("recorded", or "failed" before reaching the server). The count is the
  * reminder Alex asked for: glance at the toolbar, see there's something you
- * meant to send. Refreshed by whoever is awake — the recorder page on every
+ * meant to send. Refreshed by whoever is awake - the recorder page on every
  * list render, the popup on open, and the background script on browser
  * startup (badges do not survive a restart on their own).
  */

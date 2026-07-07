@@ -4,7 +4,7 @@
  * These mirror the server's canonical sets (lingochunk_shared.enums.Language):
  * LEARNING is the curated audio-source set; NATIVE (translation targets) is a
  * superset. The server validates on upload, so a drift here degrades to a
- * clear 400, never a broken submission — but keep them in sync when the app
+ * clear 400, never a broken submission - but keep them in sync when the app
  * adds languages.
  */
 

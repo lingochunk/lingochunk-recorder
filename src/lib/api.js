@@ -2,9 +2,9 @@
  * Minimal client for the LingoChunk public API (/api/v1), Bearer-token auth.
  *
  * Endpoints used (all require the submissions:write scope):
- *   GET  /api/v1/collections                — publish targets for the picker
- *   POST /api/v1/submissions                — multipart upload of a recording
- *   GET  /api/v1/submissions/{id}/status    — processing poll after upload
+ *   GET  /api/v1/collections                - publish targets for the picker
+ *   POST /api/v1/submissions                - multipart upload of a recording
+ *   GET  /api/v1/submissions/{id}/status    - processing poll after upload
  *
  * Errors: the server answers with a uniform {"detail": "...", "code"?: "..."}
  * body; we surface `detail` as the Error message so the UI can show it as-is.
@@ -27,7 +27,7 @@ async function raiseForStatus(response) {
     if (body && typeof body.detail === 'string') detail = body.detail;
     if (body && typeof body.code === 'string') code = body.code;
   } catch {
-    // Non-JSON error body (proxy page etc.) — keep the generic message.
+    // Non-JSON error body (proxy page etc.) - keep the generic message.
   }
   throw new ApiError(response.status, detail, code);
 }

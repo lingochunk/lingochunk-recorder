@@ -52,7 +52,7 @@ npm run build
 Temporary (resets when Firefox restarts):
 
 1. Open `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on…** and choose `dist/firefox/manifest.json`
+2. Click **Load Temporary Add-on...** and choose `dist/firefox/manifest.json`
 
 For a permanent Firefox install you need a signed build; grab the `.xpi` from
 the [releases page](https://github.com/lingochunk/lingochunk-recorder/releases)
@@ -75,12 +75,15 @@ extension's settings panel first).
 Click the toolbar icon and the popup offers one-click recording, right where
 you are:
 
-- **Record microphone** — for in-person lessons or recording yourself
-- **Record mic + "\<this tab\>"** (Chrome, on web pages) — for lessons that
-  happen in a browser tab (Google Meet, Zoom web, italki, a YouTube video):
-  the tab's audio and your microphone are mixed into one recording
-- **Record this tab only** (Chrome) — just the tab, e.g. a YouTube video or
-  podcast; your microphone is never even switched on
+- **Record microphone** - for in-person lessons or recording yourself
+- **Record mic + "\<this tab\>"** (Chrome, on web pages) - for lessons that
+  happen in a browser tab (Google Meet, Zoom web, italki and similar): the
+  tab's audio and your microphone are mixed into one recording
+- **Record this tab only** (Chrome) - just the lesson tab; your microphone
+  is never even switched on
+
+It is built for recording your own lessons and conversations. If you record
+anything else, make sure you are allowed to.
 
 You stay on the lesson tab the whole time: the capture runs in a background
 recorder tab, the toolbar icon shows a red **REC** badge, and clicking the
@@ -89,8 +92,8 @@ handles uploads, history, languages and settings, and can also start
 recordings directly.
 
 Set-and-forget options: an **auto-stop timer** (presets from 15 to 90
-minutes, or a custom length — a 12-minute video gets exactly 12 minutes;
-while recording, a live countdown shows when it will stop, with −1m/+1m
+minutes, or a custom length - a 12-minute video gets exactly 12 minutes;
+while recording, a live countdown shows when it will stop, with -1m/+1m
 buttons to nudge it),
 **send automatically** when recording stops, and the completion **email**. With all
 three on, the entire workflow is two clicks: record at the start, and an
@@ -105,7 +108,7 @@ first recording asks for microphone access via the recorder page once.
 
 ## Privacy
 
-- Audio stays on your device until you press “Send to LingoChunk”.
+- Audio stays on your device until you press "Send to LingoChunk".
 - Uploads go only to the LingoChunk server configured in settings, over HTTPS,
   into your own account.
 - The extension collects no analytics and talks to no third party.

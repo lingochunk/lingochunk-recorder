@@ -34,7 +34,7 @@ export class RecordingSession {
     this.onsourceended = null;
     // Auto-stop deadline (epoch ms) and its callback. The deadline is checked
     // on every arriving audio chunk: MediaRecorder's timeslice is driven by
-    // the media pipeline, which Chrome does NOT throttle in background tabs —
+    // the media pipeline, which Chrome does NOT throttle in background tabs  - 
     // unlike setTimeout, which can be deferred for minutes in a hidden tab.
     // This makes the auto-stop at worst one timeslice (~5s) late, never stuck.
     this.autoStopAt = null;
@@ -54,7 +54,7 @@ export class RecordingSession {
    *
    * Sources: the microphone (default), a `tabStream` (captured lesson-tab
    * audio, see tabaudio.js), or both mixed into one track via the Web Audio
-   * API. Tab audio is always played back to the speakers — capturing a tab
+   * API. Tab audio is always played back to the speakers - capturing a tab
    * MUTES it for the user, and the learner still needs to hear the teacher.
    * The microphone is never played back (feedback loop). With `mic: false`
    * the microphone is not even requested, so tab-only recording needs no mic
@@ -136,7 +136,7 @@ export class RecordingSession {
       try {
         await this.audioContext.close();
       } catch {
-        // Already closed — nothing to release.
+        // Already closed - nothing to release.
       }
     }
     const row = await this.store.updateRecording(this.recording.id, {

@@ -7,10 +7,10 @@
  * it arrives. Nothing touches the network until the user uploads.
  *
  * Two stores:
- *   recordings — one row per recording: metadata + lifecycle status
+ *   recordings - one row per recording: metadata + lifecycle status
  *                (recording → recorded → uploading → processing → uploaded,
  *                 or failed at any point)
- *   chunks     — the audio itself, keyed [recordingId, seq] so a recording's
+ *   chunks     - the audio itself, keyed [recordingId, seq] so a recording's
  *                chunks read back in order.
  */
 
@@ -151,7 +151,7 @@ export class RecordingStore {
    * An interrupted RECORDING keeps its chunks, so it becomes `recorded`
    * (ready to upload). An interrupted UPLOAD is different: the POST may have
    * reached the server before the crash, so silently re-arming it would risk
-   * a duplicate submission — it becomes `failed` with a message telling the
+   * a duplicate submission - it becomes `failed` with a message telling the
    * user to check their library before retrying.
    */
   async recoverInterrupted() {
@@ -162,8 +162,8 @@ export class RecordingStore {
         await this.updateRecording(row.id, {
           status: 'failed',
           error:
-            'Upload was interrupted. It may have reached LingoChunk — ' +
-            'check your library before retrying.',
+            'Upload was interrupted. It may have reached LingoChunk. ' +
+            'Check your library before retrying.',
         });
       } else {
         await this.updateRecording(row.id, {

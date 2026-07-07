@@ -3,7 +3,7 @@
  *
  * The popup itself cannot host a recording (Chrome destroys the popup's JS
  * context the moment it loses focus), so the actual capture always runs in
- * the recorder page — opened as a BACKGROUND tab so the user never leaves
+ * the recorder page - opened as a BACKGROUND tab so the user never leaves
  * their lesson. This popup arms the current tab, tells the recorder to
  * start/stop via runtime messaging, and mirrors its status. Closing the
  * popup mid-recording is fine by design.
@@ -59,7 +59,7 @@ async function sendToRecorder(message, tries = 25) {
       const reply = await ext.runtime.sendMessage(message);
       if (reply !== undefined) return reply;
     } catch {
-      // "Receiving end does not exist" — the page is still loading.
+      // "Receiving end does not exist" - the page is still loading.
     }
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
@@ -106,7 +106,7 @@ function startTimer(baseElapsedMs, startedAtMonotonic, autoStopRemainingMs = nul
       live.hidden = false;
       const remaining = Math.max(0, countdownDeadline - Date.now());
       $('popup-countdown').textContent =
-        remaining > 0 ? `stops in ${fmtDuration(remaining)}` : 'stopping…';
+        remaining > 0 ? `stops in ${fmtDuration(remaining)}` : 'stopping...';
       // Past the deadline, stop guessing: ask the recorder what actually
       // happened (its auto-stop may run up to one audio chunk late) and
       // flip to the truthful end state.
@@ -125,7 +125,7 @@ function startTimer(baseElapsedMs, startedAtMonotonic, autoStopRemainingMs = nul
   timerInterval = setInterval(paint, 500);
 }
 
-/** The countdown expired in this popup's view — reconcile with the recorder. */
+/** The countdown expired in this popup's view - reconcile with the recorder. */
 async function resolveEnded() {
   const status = await sendToRecorder({ type: 'rec-status' }, 1);
   if (!status) return;
@@ -166,7 +166,7 @@ async function micPermissionGranted() {
     const status = await navigator.permissions.query({ name: 'microphone' });
     return status.state === 'granted';
   } catch {
-    // Firefox has no 'microphone' permission name — proceed optimistically.
+    // Firefox has no 'microphone' permission name - proceed optimistically.
     return true;
   }
 }
@@ -181,7 +181,7 @@ function effectiveAutoStopMinutes() {
 async function startRecording(mode) {
   showError(null);
 
-  // First run: the mic grant needs a visible extension page — a prompt cannot
+  // First run: the mic grant needs a visible extension page - a prompt cannot
   // appear for a background tab. Send the user to the recorder once.
   // Tab-only recording uses no microphone, so it skips the check entirely.
   if (mode !== 'tab' && !(await micPermissionGranted())) {
@@ -237,7 +237,7 @@ async function stopRecording() {
   }
   lastRecordingId = reply.recordingId ?? null;
   if (reply.autoSent) {
-    // The recorder is already sending it (auto-send is on) — no prompt needed.
+    // The recorder is already sending it (auto-send is on) - no prompt needed.
     $('sent-hint').textContent =
       'It will appear in your LingoChunk library when processing finishes.';
     showState('sent');
@@ -249,14 +249,14 @@ async function stopRecording() {
 async function sendLastRecording() {
   showError(null);
   if (!lastRecordingId) {
-    showError('Nothing to send — record something first.');
+    showError('Nothing to send. Record something first.');
     return;
   }
   const notify = $('notify-check').checked;
   void saveSettings({ notifyDefault: notify }); // sticky for next time
   const btn = $('send-btn');
   btn.disabled = true;
-  btn.textContent = 'Sending…';
+  btn.textContent = 'Sending...';
   try {
     const reply = await sendToRecorder(
       { type: 'rec-send', recordingId: lastRecordingId, notify, tabId: recorderTabId },
@@ -307,12 +307,12 @@ async function init() {
   } else {
     // Refresh the unsent-reminder badge whenever the popup opens idle (it is
     // the one context guaranteed to run on a toolbar click). Never while
-    // recording — that would clobber the REC badge.
+    // recording - that would clobber the REC badge.
     try {
       const store = await RecordingStore.open();
       void showUnsentBadge(await store.listRecordings());
     } catch {
-      // First run — no database yet.
+      // First run - no database yet.
     }
     showState('idle');
     const tab = await activeTab();
@@ -321,8 +321,8 @@ async function init() {
     $('rec-tab-btn').hidden = !capturable;
     $('rec-tabonly-btn').hidden = !capturable;
     if (capturable && tab.title) {
-      const title = tab.title.length > 26 ? `${tab.title.slice(0, 26)}…` : tab.title;
-      $('rec-tab-label').textContent = `Record mic + “${title}”`;
+      const title = tab.title.length > 26 ? `${tab.title.slice(0, 26)}...` : tab.title;
+      $('rec-tab-label').textContent = `Record mic + "${title}"`;
     }
     $('idle-hint').textContent =
       `Recording in ${settings.learningLanguage.toUpperCase()} · ` +

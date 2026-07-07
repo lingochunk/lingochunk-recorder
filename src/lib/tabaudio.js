@@ -23,7 +23,7 @@ export function tabCaptureAvailable(e = ext) {
   return Boolean(e?.tabCapture?.getMediaStreamId);
 }
 
-/** storage.session (dies with the browser session — right lifetime for a tab
+/** storage.session (dies with the browser session - right lifetime for a tab
  *  id) when available, else storage.local. */
 function storageArea(e = ext) {
   return e.storage.session ?? e.storage.local;
@@ -63,7 +63,7 @@ export async function getArmedLessonTab(e = ext) {
 /**
  * Open an audio MediaStream of the armed tab. Must be called from the
  * recorder page (the consumer tab), in a user gesture, and only works if the
- * user clicked the extension icon on that tab since it last navigated —
+ * user clicked the extension icon on that tab since it last navigated  - 
  * otherwise Chrome rejects and the caller tells the user to click the icon
  * on the lesson tab again.
  */

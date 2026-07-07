@@ -15,7 +15,7 @@ async function refreshBadge() {
     const store = await RecordingStore.open();
     await showUnsentBadge(await store.listRecordings());
   } catch {
-    // No recordings database yet — nothing to show.
+    // No recordings database yet - nothing to show.
   }
 }
 

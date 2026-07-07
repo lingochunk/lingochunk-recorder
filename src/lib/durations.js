@@ -8,7 +8,7 @@ export const AUTO_STOP_OPTIONS = [
   ['45', 'After 45 minutes'],
   ['60', 'After 1 hour'],
   ['90', 'After 1.5 hours'],
-  ['custom', 'Custom…'],
+  ['custom', 'Custom...'],
 ];
 
 const PRESET_VALUES = new Set(AUTO_STOP_OPTIONS.map(([value]) => value));

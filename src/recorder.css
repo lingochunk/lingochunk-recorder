@@ -1,0 +1,144 @@
+/* LingoChunk paper palette, kept in sync by hand with the app's design
+ * system (docs/DESIGN-SYSTEM.md in the main repo): paper surfaces, ink text,
+ * UI-chrome blue for actions, red only for errors/destructive. */
+
+:root {
+  --paper-aged: #faf0e6;
+  --paper: #fdf6e3;
+  --paper-surface: #fffef5;
+  --paper-dark: #f0e6d2;
+  --ink: #2c2c2c;
+  --ink-light: #555550;
+  --ink-faint: #666660;
+  --ruled: #d8cbb4;
+  --blue: #2b6cb0;
+  --blue-dark: #1e4e8c;
+  --blue-light: #ebf2fa;
+  --red: #c53030;
+  --red-light: #fff5f5;
+  --green: #2f855a;
+  --green-light: #f0fff4;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper-aged);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.page { max-width: 680px; margin: 0 auto; padding: 16px 16px 48px; }
+
+.header { display: flex; align-items: center; gap: 10px; padding: 8px 2px 14px; }
+.header h1 { font-size: 1.15rem; margin: 0; flex: 1; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.card {
+  background: var(--paper-surface);
+  border: 1px solid var(--ruled);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.card h2 { font-size: 0.95rem; margin: 0 0 10px; }
+
+.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.field-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+input, select {
+  background: var(--paper);
+  border: 1px solid var(--ruled);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--ink);
+  min-width: 0;
+}
+input:focus, select:focus { outline: none; border-color: var(--blue); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+@media (max-width: 520px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+
+.btn {
+  border: 1px solid var(--ruled);
+  background: var(--paper-surface);
+  color: var(--ink-light);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+}
+.btn:hover { background: var(--paper-dark); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn-primary:hover { background: var(--blue-dark); }
+.btn-ghost { border: none; background: transparent; font-size: 1.05rem; padding: 4px 8px; }
+.btn-danger-ghost { color: var(--red); border-color: rgba(197, 48, 48, 0.35); }
+.btn-danger-ghost:hover { background: var(--red-light); }
+.btn-small { padding: 5px 10px; font-size: 0.85rem; }
+
+.btn-record {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--blue); border-color: var(--blue); color: #fff;
+  padding: 11px 20px; font-size: 1rem; border-radius: 10px;
+}
+.btn-record:hover { background: var(--blue-dark); }
+.btn-record.recording { background: var(--red); border-color: var(--red); }
+.record-dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+.btn-record.recording .record-dot { animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+.record-row { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.timer { font-variant-numeric: tabular-nums; font-size: 1.2rem; font-weight: 600; }
+
+.pill {
+  font-size: 0.72rem; font-weight: 600; border-radius: 999px;
+  padding: 3px 9px; white-space: nowrap;
+}
+.pill-muted { background: var(--paper-dark); color: var(--ink-faint); }
+.pill-blue { background: var(--blue-light); color: var(--blue-dark); }
+.pill-green { background: var(--green-light); color: var(--green); }
+.pill-red { background: var(--red-light); color: var(--red); }
+
+.recordings { list-style: none; margin: 0; padding: 0; }
+.recordings li {
+  border-top: 1px solid rgba(216, 203, 180, 0.5);
+  padding: 10px 0;
+}
+.recordings li:first-child { border-top: none; padding-top: 0; }
+.rec-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rec-title { font-weight: 600; }
+.rec-meta { color: var(--ink-faint); font-size: 0.8rem; }
+.rec-status-line { margin: 4px 0 6px; font-size: 0.85rem; color: var(--ink-light); }
+.rec-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.hint { color: var(--ink-faint); font-size: 0.82rem; margin: 8px 0 0; }
+.error {
+  background: var(--red-light);
+  border: 1px solid rgba(197, 48, 48, 0.3);
+  color: var(--red);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  margin: 10px 0 0;
+}
+
+.manual-token { margin-top: 12px; }
+.manual-token summary { cursor: pointer; color: var(--ink-faint); font-size: 0.85rem; }
+.manual-token input { flex: 1; }
+
+a { color: var(--blue); }
+progress { accent-color: var(--blue); width: 120px; height: 8px; }

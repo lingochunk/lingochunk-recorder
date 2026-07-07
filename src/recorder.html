@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LingoChunk Recorder</title>
+  <link rel="icon" href="icons/icon-32.png" />
+  <link rel="stylesheet" href="recorder.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <img src="icons/icon-48.png" alt="" width="28" height="28" />
+      <h1>LingoChunk Recorder</h1>
+      <div class="header-right">
+        <span id="conn-status" class="pill pill-muted">Not connected</span>
+        <button id="toggle-settings" class="btn btn-ghost" type="button" title="Settings">⚙</button>
+      </div>
+    </header>
+
+    <!-- Connection / settings -->
+    <section id="settings-panel" class="card" hidden>
+      <h2>Connection</h2>
+      <label class="field">
+        <span class="field-label">LingoChunk server</span>
+        <input id="api-base" type="url" spellcheck="false" placeholder="https://lingochunk.com" />
+      </label>
+      <div class="row">
+        <button id="connect-btn" class="btn btn-primary" type="button">Connect to LingoChunk</button>
+        <button id="disconnect-btn" class="btn btn-danger-ghost" type="button" hidden>Disconnect</button>
+      </div>
+      <details class="manual-token">
+        <summary>Or paste an API token manually</summary>
+        <p class="hint">
+          Create a token with the <strong>Upload audio</strong> scope in
+          LingoChunk → Settings → API tokens, then paste it here.
+        </p>
+        <div class="row">
+          <input id="manual-token" type="password" spellcheck="false" placeholder="lcp_…" />
+          <button id="save-token-btn" class="btn" type="button">Save token</button>
+        </div>
+      </details>
+      <p id="settings-error" class="error" hidden></p>
+    </section>
+
+    <!-- Recording controls -->
+    <section class="card">
+      <h2>New recording</h2>
+      <div class="grid-2">
+        <label class="field">
+          <span class="field-label">Microphone</span>
+          <select id="mic-select"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">Title</span>
+          <input id="rec-title" type="text" maxlength="200" placeholder="e.g. Lesson with Anna" />
+        </label>
+        <label class="field">
+          <span class="field-label">I'm learning</span>
+          <select id="learning-lang"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">Translations in</span>
+          <select id="native-lang"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">My level</span>
+          <select id="level-select"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">Collection (optional)</span>
+          <select id="collection-select">
+            <option value="">— none —</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="record-row">
+        <button id="record-btn" class="btn btn-record" type="button">
+          <span class="record-dot"></span>
+          <span id="record-label">Start recording</span>
+        </button>
+        <span id="timer" class="timer" hidden>0:00</span>
+      </div>
+      <p class="hint">
+        Audio is stored on this device while you record. Nothing is sent to
+        LingoChunk until you press Upload.
+      </p>
+      <p id="record-error" class="error" hidden></p>
+    </section>
+
+    <!-- Saved recordings -->
+    <section class="card">
+      <h2>Recordings</h2>
+      <ul id="recordings" class="recordings"></ul>
+      <p id="empty-note" class="hint">Nothing recorded yet.</p>
+    </section>
+  </main>
+
+  <script type="module" src="recorder.js"></script>
+</body>
+</html>

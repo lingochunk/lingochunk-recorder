@@ -75,5 +75,5 @@ disclosures, which are legal statements by the publisher.
 
 - Icon 128×128: shipped inside the package (`src/icons/icon-128.png`)
 - Screenshots (1280×800): `docs/store/screenshot-recorder.png`,
-  `docs/store/screenshot-popup.png`
+  `docs/store/screenshot-popup.png`, `docs/store/screenshot-recording.png` (mid-recording with the auto-stop countdown)
 - Promo tiles: optional; skip for the first submission

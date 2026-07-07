@@ -13,7 +13,12 @@ npm run build -- --zip
 ```
 
 This produces `dist/lingochunk-recorder-chrome.zip` and
-`dist/lingochunk-recorder-firefox.zip` (requires the `zip` CLI).
+`dist/lingochunk-recorder-firefox.zip` (requires the `zip` CLI). The chrome
+zip has the manifest's dev-only `key` field stripped automatically — the
+Chrome Web Store rejects packages that contain it.
+
+Listing copy and privacy-tab answers are pre-written in
+[STORE-LISTING.md](STORE-LISTING.md); screenshots are in `docs/store/`.
 
 Before every release:
 

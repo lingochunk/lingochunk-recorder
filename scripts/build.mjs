@@ -11,7 +11,7 @@
  *   node scripts/build.mjs --zip      # also writes dist/*.zip (for store upload)
  */
 
-import { cpSync, mkdirSync, rmSync, copyFileSync, existsSync } from 'node:fs';
+import { cpSync, mkdirSync, rmSync, copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,10 +30,19 @@ for (const browser of ['chrome', 'firefox']) {
   console.log(`built dist/${browser}`);
 
   if (wantZip) {
+    // Stage a store copy: the Chrome Web Store REJECTS manifests containing
+    // "key" (it is a dev-only id pin for the unpacked build / e2e tests), so
+    // strip it from the uploaded package only.
+    const stage = join(dist, `${browser}-store`);
+    cpSync(out, stage, { recursive: true });
+    const manifest = JSON.parse(readFileSync(join(stage, 'manifest.json'), 'utf8'));
+    delete manifest.key;
+    writeFileSync(join(stage, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
     // Zip CONTENTS of the dir (manifest.json at archive root), as stores require.
     execFileSync('zip', ['-r', '-q', join(dist, `lingochunk-recorder-${browser}.zip`), '.'], {
-      cwd: out,
+      cwd: stage,
     });
+    rmSync(stage, { recursive: true, force: true });
     console.log(`zipped dist/lingochunk-recorder-${browser}.zip`);
   }
 }

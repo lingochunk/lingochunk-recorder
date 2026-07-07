@@ -48,6 +48,14 @@ describe('armLessonTab', () => {
     expect(e._stored.lessonTab).toBeUndefined();
   });
 
+  it('arms a tab whose url is hidden from the extension', async () => {
+    // Without broad tab permissions Chrome may omit tab.url; the deliberate
+    // icon click still means "this tab", so arming must not be refused.
+    const e = fakeExt();
+    expect(await armLessonTab({ id: 4, title: 'Hidden url tab' }, e)).toBe(true);
+    expect(e._stored.lessonTab).toEqual({ tabId: 4, title: 'Hidden url tab' });
+  });
+
   it('falls back to storage.local when storage.session is unavailable', async () => {
     const e = fakeExt({ hasSession: false });
     await armLessonTab({ id: 9, url: 'https://x.example/', title: 't' }, e);

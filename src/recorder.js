@@ -516,6 +516,10 @@ async function init() {
   // A toolbar click on a lesson tab (re)arms it while this page is open.
   ext?.storage?.onChanged?.addListener?.(() => void refreshSourceOptions());
   window.addEventListener('focus', () => void refreshSourceOptions());
+  // Tab switches fire visibilitychange even when window focus does not change.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) void refreshSourceOptions();
+  });
 
   window.addEventListener('beforeunload', (event) => {
     if (session.active) {

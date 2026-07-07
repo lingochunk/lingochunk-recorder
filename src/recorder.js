@@ -24,6 +24,9 @@ let session;
 let settings;
 let timerInterval = null;
 const pollers = new Map(); // recordingId -> {stop}
+// Uploads currently in flight. Guards against a double-clicked Upload button
+// firing two POSTs for one recording (= two paid submissions server-side).
+const inFlightUploads = new Set();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -252,19 +255,23 @@ function actionButton(label, onClick, className = 'btn btn-small') {
 }
 
 async function handleUpload(recordingId) {
+  if (inFlightUploads.has(recordingId)) return;
   if (!settings.token) {
     $('settings-panel').hidden = false;
     showError($('settings-error'), 'Connect to LingoChunk first, then upload.');
     return;
   }
-  await renderRecordings();
+  inFlightUploads.add(recordingId);
+  await renderRecordings(); // repaint immediately: Upload button gone
   try {
     const row = await uploadRecording(store, api(), recordingId);
     startPolling(row);
   } catch {
     // Row already parked in `failed` with the server message.
+  } finally {
+    inFlightUploads.delete(recordingId);
+    await renderRecordings();
   }
-  await renderRecordings();
 }
 
 function startPolling(row) {
@@ -291,6 +298,25 @@ function startPolling(row) {
     },
   });
   pollers.set(row.id, poller);
+  // A permanent poll error (revoked token, deleted submission) must not
+  // strand the row at "Processing…" as an unhandled rejection. Park it as
+  // failed; the row keeps its submissionId, so the UI offers "Check status"
+  // (resume polling) rather than "Retry upload" — the audio was already
+  // uploaded and re-posting it would duplicate the submission.
+  poller.promise.catch(async (error) => {
+    pollers.delete(row.id);
+    await store.updateRecording(row.id, {
+      status: 'failed',
+      error: `Could not check processing status: ${error.message ?? error}`,
+    });
+    await renderRecordings();
+  });
+}
+
+async function resumePolling(row) {
+  await store.updateRecording(row.id, { status: 'processing', error: null });
+  startPolling(row);
+  await renderRecordings();
 }
 
 async function handleDownload(recordingId) {
@@ -325,6 +351,9 @@ async function renderRecordings() {
 
   for (const row of rows) {
     const li = document.createElement('li');
+    // A row whose upload is in flight renders as uploading even if the store
+    // still says `recorded` — the guard set is the truth for button state.
+    const status = inFlightUploads.has(row.id) ? 'uploading' : row.status;
 
     const head = document.createElement('div');
     head.className = 'rec-head';
@@ -334,21 +363,21 @@ async function renderRecordings() {
     const meta = document.createElement('span');
     meta.className = 'rec-meta';
     meta.textContent = `${new Date(row.createdAt).toLocaleString()} · ${fmtDuration(row.durationMs)} · ${fmtSize(row.sizeBytes)} · ${row.learningLanguage}`;
-    const [pillText, pillClass] = STATUS_PILLS[row.status] ?? [row.status, 'pill-muted'];
+    const [pillText, pillClass] = STATUS_PILLS[status] ?? [status, 'pill-muted'];
     const pill = document.createElement('span');
     pill.className = `pill ${pillClass}`;
     pill.textContent = pillText;
     head.append(title, meta, pill);
     li.append(head);
 
-    if (row.status === 'processing') {
+    if (status === 'processing') {
       const line = document.createElement('div');
       line.className = 'rec-status-line';
       line.dataset.statusFor = row.id;
       line.textContent = 'processing…';
       li.append(line);
     }
-    if (row.status === 'failed' && row.error) {
+    if (status === 'failed' && row.error) {
       const line = document.createElement('div');
       line.className = 'rec-status-line';
       line.textContent = row.error;
@@ -357,13 +386,19 @@ async function renderRecordings() {
 
     const actions = document.createElement('div');
     actions.className = 'rec-actions';
-    if (row.status === 'recorded') {
+    if (status === 'recorded') {
       actions.append(actionButton('Upload', () => handleUpload(row.id), 'btn btn-small btn-primary'));
     }
-    if (row.status === 'failed') {
-      actions.append(actionButton('Retry upload', () => handleUpload(row.id), 'btn btn-small btn-primary'));
+    if (status === 'failed') {
+      if (row.submissionId) {
+        // The audio already reached the server; re-posting it would create a
+        // duplicate submission. Offer to resume the status poll instead.
+        actions.append(actionButton('Check status', () => resumePolling(row), 'btn btn-small btn-primary'));
+      } else {
+        actions.append(actionButton('Retry upload', () => handleUpload(row.id), 'btn btn-small btn-primary'));
+      }
     }
-    if ((row.status === 'uploaded' || row.status === 'processing') && row.submissionId) {
+    if (row.submissionId && (status === 'uploaded' || status === 'processing' || status === 'failed')) {
       const link = document.createElement('a');
       link.href = api().submissionUrl(row.submissionId);
       link.target = '_blank';
@@ -372,7 +407,7 @@ async function renderRecordings() {
       link.className = 'btn btn-small';
       actions.append(link);
     }
-    if (row.status !== 'recording' && row.status !== 'uploading') {
+    if (status !== 'recording' && status !== 'uploading') {
       actions.append(actionButton('Download', () => handleDownload(row.id)));
       actions.append(actionButton('Delete', () => handleDelete(row.id), 'btn btn-small btn-danger-ghost'));
     }

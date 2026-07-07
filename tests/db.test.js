@@ -70,16 +70,28 @@ describe('RecordingStore', () => {
     const withAudio = await store.createRecording({});
     await store.appendChunk(withAudio.id, 0, chunk('x'));
     const empty = await store.createRecording({});
+
+    const recovered = await store.recoverInterrupted();
+    expect(recovered).toBe(2);
+    expect((await store.getRecording(withAudio.id)).status).toBe('recorded');
+    const emptyRow = await store.getRecording(empty.id);
+    expect(emptyRow.status).toBe('failed');
+    expect(emptyRow.error).toMatch(/interrupted/);
+  });
+
+  it('parks a crash-interrupted upload as failed, never silently re-armed', async () => {
+    // The POST may have reached the server before the crash; auto-returning
+    // the row to `recorded` would invite a duplicate submission on retry.
     const uploading = await store.createRecording({});
     await store.appendChunk(uploading.id, 0, chunk('y'));
     await store.updateRecording(uploading.id, { status: 'uploading' });
 
     const recovered = await store.recoverInterrupted();
-    expect(recovered).toBe(3);
-    expect((await store.getRecording(withAudio.id)).status).toBe('recorded');
-    expect((await store.getRecording(uploading.id)).status).toBe('recorded');
-    const emptyRow = await store.getRecording(empty.id);
-    expect(emptyRow.status).toBe('failed');
-    expect(emptyRow.error).toMatch(/interrupted/);
+    expect(recovered).toBe(1);
+    const row = await store.getRecording(uploading.id);
+    expect(row.status).toBe('failed');
+    expect(row.error).toMatch(/check your library/);
+    // The audio itself is preserved for a deliberate retry.
+    expect((await store.assembleBlob(uploading.id)).size).toBeGreaterThan(0);
   });
 });

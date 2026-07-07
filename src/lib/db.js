@@ -146,16 +146,31 @@ export class RecordingStore {
   /**
    * Recover rows stuck in a transient state by a crash: a row still marked
    * `recording` or `uploading` after a page load cannot actually be doing
-   * either. Chunks are intact, so it becomes `recorded` (ready to upload).
+   * either.
+   *
+   * An interrupted RECORDING keeps its chunks, so it becomes `recorded`
+   * (ready to upload). An interrupted UPLOAD is different: the POST may have
+   * reached the server before the crash, so silently re-arming it would risk
+   * a duplicate submission — it becomes `failed` with a message telling the
+   * user to check their library before retrying.
    */
   async recoverInterrupted() {
     const rows = await this.listRecordings();
     const stuck = rows.filter((r) => r.status === 'recording' || r.status === 'uploading');
     for (const row of stuck) {
-      await this.updateRecording(row.id, {
-        status: row.chunkCount > 0 ? 'recorded' : 'failed',
-        error: row.chunkCount > 0 ? null : 'Recording was interrupted before any audio was captured.',
-      });
+      if (row.status === 'uploading') {
+        await this.updateRecording(row.id, {
+          status: 'failed',
+          error:
+            'Upload was interrupted. It may have reached LingoChunk — ' +
+            'check your library before retrying.',
+        });
+      } else {
+        await this.updateRecording(row.id, {
+          status: row.chunkCount > 0 ? 'recorded' : 'failed',
+          error: row.chunkCount > 0 ? null : 'Recording was interrupted before any audio was captured.',
+        });
+      }
     }
     return stuck.length;
   }

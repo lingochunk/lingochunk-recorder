@@ -27,12 +27,12 @@ Press record at the start of your language lesson, press stop at the end, and se
 
 WHAT IT DOES
 
-- Records your microphone, for in-person lessons, tutoring sessions or recording yourself
-- Records an online lesson in one click: your microphone and the lesson's browser tab (Google Meet, Zoom web, italki and similar) are mixed into a single recording, and you never have to leave the tab
-- Or records just the lesson tab, without switching your microphone on at all
-- Recording is local-first: audio is saved on your device every few seconds while you record, so a crash loses seconds, not the hour. Nothing is sent anywhere until you press "Send to LingoChunk"
-- Set-and-forget: auto-stop after your lesson length (presets or a custom number of minutes), optional automatic send, and an optional email when processing finishes
-- Failed sends stay on your device for retry, and a badge on the icon reminds you of recordings not yet sent
+• Records your microphone, for in-person lessons, tutoring sessions or recording yourself
+• Records an online lesson in one click: your microphone and the lesson's browser tab (Google Meet, Zoom web, italki and similar) are mixed into a single recording, and you never have to leave the tab
+• Or records just the lesson tab, without switching your microphone on at all
+• Recording is local-first: audio is saved on your device every few seconds while you record, so a crash loses seconds, not the hour. Nothing is sent anywhere until you press "Send to LingoChunk"
+• Set-and-forget: auto-stop after your lesson length (presets or a custom number of minutes), optional automatic send, and an optional email when processing finishes
+• Failed sends stay on your device for retry, and a badge on the icon reminds you of recordings not yet sent
 
 YOU NEED a free LingoChunk account (https://lingochunk.com). Connecting is one click and creates a narrowly-scoped access token you can revoke at any time from LingoChunk settings.
 

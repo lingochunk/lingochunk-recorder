@@ -14,6 +14,7 @@ import { RecordingStore } from './lib/db.js';
 import { AUTO_STOP_OPTIONS, clampCustomMinutes, selectValueFor } from './lib/durations.js';
 import { ext } from './lib/env.js';
 import { getSettings, saveSettings } from './lib/settings.js';
+import { AUTO_LANGUAGE } from './lib/languages.js';
 import { armLessonTab, tabCaptureAvailable } from './lib/tabaudio.js';
 
 const RECORDER_URL = ext.runtime.getURL('src/recorder.html');
@@ -325,8 +326,10 @@ async function init() {
       $('rec-tab-label').textContent = `Record mic + "${title}"`;
     }
     $('idle-hint').textContent =
-      `Recording in ${settings.learningLanguage.toUpperCase()} · ` +
-      'change languages in the recorder.';
+      settings.learningLanguage === AUTO_LANGUAGE
+        ? 'Language detected from the recording · change it in the recorder.'
+        : `Recording in ${settings.learningLanguage.toUpperCase()} · ` +
+          'change languages in the recorder.';
   }
 
   $('rec-tab-btn').addEventListener('click', () => void startRecording('mic+tab'));

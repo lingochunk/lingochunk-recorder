@@ -9,13 +9,18 @@
  */
 
 import { ext } from './env.js';
+import { AUTO_LANGUAGE } from './languages.js';
 
 export const DEFAULT_API_BASE = 'https://lingochunk.com';
 
 const DEFAULTS = {
   apiBase: DEFAULT_API_BASE,
   token: null,
-  learningLanguage: 'de',
+  // Identification by default: a first-run user recording a tab in some
+  // language was filed under whatever sat here (LINGOCHUNK-79). The server
+  // decides from the recording; picking a language in the recorder is still
+  // one click away and stays sticky.
+  learningLanguage: AUTO_LANGUAGE,
   nativeLanguage: 'en',
   level: 'A2',
   collection: '',

@@ -15,7 +15,7 @@ import { showRecordingBadge, showUnsentBadge } from './lib/badge.js';
 import { AUTO_STOP_OPTIONS, clampCustomMinutes, selectValueFor } from './lib/durations.js';
 import { ext } from './lib/env.js';
 import { RecordingStore } from './lib/db.js';
-import { CEFR_LEVELS, LEARNING_LANGUAGES, NATIVE_LANGUAGES } from './lib/languages.js';
+import { AUTO_LANGUAGE, CEFR_LEVELS, LEARNING_LANGUAGES, NATIVE_LANGUAGES } from './lib/languages.js';
 import { RecordingSession, listMicrophones } from './lib/recording.js';
 import { DEFAULT_API_BASE, ensureOriginPermission, getSettings, saveSettings, clearToken } from './lib/settings.js';
 import { captureTabAudio, getArmedLessonTab, tabCaptureAvailable } from './lib/tabaudio.js';
@@ -570,7 +570,8 @@ async function renderRecordings() {
       row.source === 'mic+tab' ? ' · with tab audio' : row.source === 'tab' ? ' · tab audio' : '';
     meta.textContent =
       `${new Date(row.createdAt).toLocaleString()} · ${fmtDuration(row.durationMs)} · ` +
-      `${fmtSize(row.sizeBytes)} · ${row.learningLanguage}${sourceTag}`;
+      `${fmtSize(row.sizeBytes)} · ` +
+      `${row.learningLanguage === AUTO_LANGUAGE ? 'language detected' : row.learningLanguage}${sourceTag}`;
     const [pillText, pillClass] = STATUS_PILLS[status] ?? [status, 'pill-muted'];
     const pill = document.createElement('span');
     pill.className = `pill ${pillClass}`;

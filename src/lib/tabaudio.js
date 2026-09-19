@@ -32,11 +32,13 @@ function storageArea(e = ext) {
 /** Remember the tab the user invoked us on, if it is a capturable web page.
  *  Returns true when armed.
  *
- *  A tab whose url we cannot see (Chrome hides urls from extensions without
- *  broad tab permissions) is still armed: the user deliberately clicked the
- *  icon there, and an uncapturable page (chrome:// etc.) fails at capture
- *  time with a clear message rather than being silently ignored here. Only a
- *  VISIBLY non-web url is refused. */
+ *  The activeTab permission hands us the invoked tab's title and url, so a
+ *  YouTube tab is armed under its real title rather than the 'Lesson tab'
+ *  fallback (LINGOCHUNK-79: that fallback became the submission's title).
+ *  A tab whose url we still cannot see is armed anyway: the user deliberately
+ *  clicked the icon there, and an uncapturable page (chrome:// etc.) fails at
+ *  capture time with a clear message rather than being silently ignored
+ *  here. Only a VISIBLY non-web url is refused. */
 export async function armLessonTab(tab, e = ext) {
   if (!tab || tab.id === undefined) return false;
   if (tab.url !== undefined && !/^https?:/.test(tab.url)) return false;

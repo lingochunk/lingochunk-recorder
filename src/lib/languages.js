@@ -8,7 +8,15 @@
  * adds languages.
  */
 
-export const LEARNING_LANGUAGES = [
+/** The value that asks the server to work the language out from the recording
+ *  itself (public API 1.11 and later; an older self-hosted server answers a
+ *  clear 400). A tab recording is exactly the case where the user cannot be
+ *  expected to know: LINGOCHUNK-79 was an English tab filed as German by a
+ *  sticky default. */
+export const AUTO_LANGUAGE = 'auto';
+
+/** The languages the server transcribes (the curated audio-source set). */
+export const AUDIO_LANGUAGES = [
   ['de', 'German'],
   ['en', 'English'],
   ['es', 'Spanish'],
@@ -24,6 +32,12 @@ export const LEARNING_LANGUAGES = [
   ['cs', 'Czech'],
   ['zh', 'Chinese'],
   ['ja', 'Japanese'],
+];
+
+/** The "I'm learning" picker: identification first, then the audio languages. */
+export const LEARNING_LANGUAGES = [
+  [AUTO_LANGUAGE, 'Detect from the recording'],
+  ...AUDIO_LANGUAGES,
 ];
 
 const TRANSLATION_ONLY = [
@@ -50,7 +64,7 @@ const TRANSLATION_ONLY = [
   ['vi', 'Vietnamese'],
 ];
 
-export const NATIVE_LANGUAGES = [...LEARNING_LANGUAGES, ...TRANSLATION_ONLY].sort(
+export const NATIVE_LANGUAGES = [...AUDIO_LANGUAGES, ...TRANSLATION_ONLY].sort(
   (a, b) => a[1].localeCompare(b[1]),
 );
 

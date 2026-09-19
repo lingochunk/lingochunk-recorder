@@ -43,6 +43,25 @@ describe('ApiClient', () => {
     expect(form.get('audio').name).toBe('rec.webm');
   });
 
+  it('passes the identification request through as the server expects it', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ submission_id: 's2', job_id: 'j2', status: 'queued' }), {
+        status: 201,
+      }),
+    );
+    const client = new ApiClient('https://lingochunk.com', 'lcp_t', fetchMock);
+    await client.createSubmission({
+      blob: new Blob(['audio'], { type: 'audio/webm' }),
+      filename: 'rec.webm',
+      learningLanguage: 'auto',
+      nativeLanguage: 'de',
+      level: 'B1',
+    });
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.body.get('learning_language')).toBe('auto');
+    expect(init.body.get('native_language')).toBe('de');
+  });
+
   it('omits empty optional fields', async () => {
     const fetchMock = vi.fn().mockResolvedValue(ok({ submission_id: 's', job_id: 'j', status: 'queued' }));
     const client = new ApiClient('https://lingochunk.com', 'lcp_t', fetchMock);

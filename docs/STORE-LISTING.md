@@ -69,6 +69,12 @@ One-click account connection via LingoChunk's authorise page (launchWebAuthFlow)
 Records the lesson tab's audio when the user picks a tab source in the popup.
 ```
 
+`activeTab`:
+
+```text
+Reads the title and address of the tab the user clicked the icon on, so a recording of that tab is named after it.
+```
+
 Host permission `lingochunk.com`:
 
 ```text

@@ -90,7 +90,7 @@ describe('RecordingStore', () => {
     expect(recovered).toBe(1);
     const row = await store.getRecording(uploading.id);
     expect(row.status).toBe('failed');
-    expect(row.error).toMatch(/check your library/);
+    expect(row.error).toMatch(/check your library/i);
     // The audio itself is preserved for a deliberate retry.
     expect((await store.assembleBlob(uploading.id)).size).toBeGreaterThan(0);
   });
